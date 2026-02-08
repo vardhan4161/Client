@@ -95,7 +95,9 @@ const Dashboard = () => {
                             </div>
                             <div>
                                 <p className="text-gray-600 text-sm">Total Applicants</p>
-                                <p className="text-2xl font-bold text-gray-900">-</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {jobs.reduce((sum, job) => sum + (job.applicantCount || 0), 0)}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -129,17 +131,21 @@ const Dashboard = () => {
                 ) : (
                     <div className="grid grid-cols-1 gap-4">
                         {jobs.map((job) => (
-                            <div key={job.id} className="card hover:shadow-md transition-shadow">
+                            <div key={job._id} className="card hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-start">
                                     <div className="flex-1">
                                         <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
                                         <p className="text-gray-600 mb-4 line-clamp-2">{job.description}</p>
                                         <div className="flex items-center gap-4">
                                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${job.status === 'OPEN'
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : 'bg-gray-100 text-gray-700'
+                                                ? 'bg-green-100 text-green-700'
+                                                : 'bg-gray-100 text-gray-700'
                                                 }`}>
                                                 {job.status}
+                                            </span>
+                                            <span className="text-sm text-gray-500 flex items-center gap-1">
+                                                <Users className="w-4 h-4" />
+                                                {job.applicantCount || 0} Applicants
                                             </span>
                                             <span className="text-sm text-gray-500">
                                                 Created {new Date(job.created_at).toLocaleDateString()}
@@ -148,11 +154,11 @@ const Dashboard = () => {
                                     </div>
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => copyApplicationLink(job.id)}
+                                            onClick={() => copyApplicationLink(job._id)}
                                             className="btn-secondary flex items-center gap-2"
                                             title="Copy application link"
                                         >
-                                            {copiedId === job.id ? (
+                                            {copiedId === job._id ? (
                                                 <>
                                                     <Check className="w-4 h-4" />
                                                     Copied!
@@ -165,7 +171,7 @@ const Dashboard = () => {
                                             )}
                                         </button>
                                         <button
-                                            onClick={() => navigate(`/job/${job.id}/candidates`)}
+                                            onClick={() => navigate(`/job/${job._id}/candidates`)}
                                             className="btn-primary flex items-center gap-2"
                                         >
                                             <Users className="w-4 h-4" />

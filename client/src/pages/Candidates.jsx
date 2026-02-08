@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { applicationAPI } from '../services/api';
-import { ArrowLeft, Download, Filter, Search } from 'lucide-react';
+import { ArrowLeft, Download, Filter, Search, Loader } from 'lucide-react';
 
 const Candidates = () => {
     const { jobId } = useParams();
@@ -10,6 +10,7 @@ const Candidates = () => {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('ALL');
     const [searchTerm, setSearchTerm] = useState('');
+    const [expandSummary, setExpandSummary] = useState(null);
 
     useEffect(() => {
         fetchCandidates();
@@ -52,9 +53,15 @@ const Candidates = () => {
         HOLD: 'bg-yellow-100 text-yellow-700',
     };
 
+    const getScoreColor = (score) => {
+        if (score >= 80) return 'text-green-600';
+        if (score >= 60) return 'text-yellow-600';
+        return 'text-red-600';
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
-            <header className="bg-white shadow-sm border-b border-gray-200">
+            <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <button
                         onClick={() => navigate('/dashboard')}
@@ -63,13 +70,18 @@ const Candidates = () => {
                         <ArrowLeft className="w-5 h-5" />
                         Back to Dashboard
                     </button>
-                    <h1 className="text-2xl font-bold text-gray-900">Candidates</h1>
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl font-bold text-gray-900">Candidates</h1>
+                        <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium">
+                            {filteredCandidates.length} Applicants
+                        </div>
+                    </div>
                 </div>
             </header>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Filters */}
-                <div className="card mb-6">
+                <div className="card mb-6 sticky top-24 z-10 shadow-lg">
                     <div className="flex flex-col md:flex-row gap-4">
                         <div className="flex-1">
                             <div className="relative">
@@ -83,14 +95,14 @@ const Candidates = () => {
                                 />
                             </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
                             {['ALL', 'APPLIED', 'SHORTLISTED', 'HOLD', 'REJECTED', 'HIRED'].map((status) => (
                                 <button
                                     key={status}
                                     onClick={() => setFilter(status)}
-                                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === status
-                                            ? 'bg-primary-600 text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${filter === status
+                                        ? 'bg-primary-600 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                 >
                                     {status}
@@ -103,29 +115,37 @@ const Candidates = () => {
                 {/* Candidates List */}
                 {loading ? (
                     <div className="text-center py-12">
+                        <Loader className="w-8 h-8 text-primary-600 animate-spin mx-auto mb-4" />
                         <p className="text-gray-600">Loading candidates...</p>
                     </div>
                 ) : filteredCandidates.length === 0 ? (
                     <div className="card text-center py-12">
-                        <p className="text-gray-600">No candidates found</p>
+                        <p className="text-gray-600">No candidates found matching your criteria</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         {filteredCandidates.map((candidate) => (
-                            <div key={candidate.id} className="card hover:shadow-md transition-shadow">
-                                <div className="flex justify-between items-start mb-4">
+                            <div key={candidate.application_id} className="card hover:shadow-md transition-all duration-200 border border-gray-100">
+                                <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
                                     <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <h3 className="text-lg font-semibold text-gray-900">{candidate.name}</h3>
-                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[candidate.application_status]}`}>
+                                        <div className="flex flex-wrap items-center gap-3 mb-2">
+                                            <h3 className="text-lg font-bold text-gray-900">{candidate.name}</h3>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${statusColors[candidate.application_status]}`}>
                                                 {candidate.application_status}
                                             </span>
-                                            <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
-                                                Match: {candidate.match_score}%
-                                            </span>
+                                            <div className="flex items-center gap-1 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
+                                                <span className="text-xs text-gray-500 font-medium">MATCH SCORE</span>
+                                                <span className={`text-sm font-bold ${getScoreColor(candidate.match_score)}`}>
+                                                    {candidate.match_score}%
+                                                </span>
+                                            </div>
                                         </div>
                                         <div className="text-sm text-gray-600 space-y-1">
-                                            <p>📧 {candidate.email} | 📱 {candidate.phone}</p>
+                                            <p className="flex items-center gap-2">
+                                                📧 <a href={`mailto:${candidate.email}`} className="hover:text-primary-600">{candidate.email}</a>
+                                                <span className="text-gray-300">|</span>
+                                                📱 <a href={`tel:${candidate.phone}`} className="hover:text-primary-600">{candidate.phone}</a>
+                                            </p>
                                             <p>📍 {candidate.current_location}</p>
                                         </div>
                                     </div>
@@ -134,41 +154,41 @@ const Candidates = () => {
                                             href={`http://localhost:5000${candidate.resume_url}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="btn-secondary flex items-center gap-2"
+                                            className="btn-secondary flex items-center gap-2 whitespace-nowrap"
                                         >
                                             <Download className="w-4 h-4" />
-                                            Resume
+                                            View Resume
                                         </a>
                                     )}
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-sm bg-gray-50 p-4 rounded-lg border border-gray-100">
                                     <div>
-                                        <p className="text-gray-500">Total Exp</p>
-                                        <p className="font-medium">{candidate.experience_years} years</p>
+                                        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Total Exp</p>
+                                        <p className="font-semibold text-gray-900">{candidate.experience_years} years</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-500">Current CTC</p>
-                                        <p className="font-medium">₹{candidate.current_ctc} LPA</p>
+                                        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Current CTC</p>
+                                        <p className="font-semibold text-gray-900">₹{candidate.current_ctc} LPA</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-500">Expected CTC</p>
-                                        <p className="font-medium">₹{candidate.expected_ctc} LPA</p>
+                                        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Expected CTC</p>
+                                        <p className="font-semibold text-gray-900">₹{candidate.expected_ctc} LPA</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-500">Notice Period</p>
-                                        <p className="font-medium">{candidate.notice_period} days</p>
+                                        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Notice Period</p>
+                                        <p className="font-semibold text-gray-900">{candidate.notice_period} days</p>
                                     </div>
                                 </div>
 
                                 {candidate.skills && candidate.skills.length > 0 && (
                                     <div className="mb-4">
-                                        <p className="text-sm text-gray-500 mb-2">Skills</p>
+                                        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2">Key Skills</p>
                                         <div className="flex flex-wrap gap-2">
                                             {candidate.skills.map((skill, idx) => (
                                                 <span
                                                     key={idx}
-                                                    className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm"
+                                                    className="px-3 py-1 bg-blue-50 text-blue-700 rounded-md text-sm font-medium border border-blue-100"
                                                 >
                                                     {skill}
                                                 </span>
@@ -178,36 +198,59 @@ const Candidates = () => {
                                 )}
 
                                 {candidate.ai_summary && (
-                                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                                        <p className="text-sm text-gray-700">{candidate.ai_summary}</p>
+                                    <div className="mb-4">
+                                        <div
+                                            className={`p-4 rounded-lg border-l-4 cursor-pointer transition-colors ${candidate.ai_summary.includes('⚠️')
+                                                ? 'bg-amber-50 border-amber-400 text-amber-900'
+                                                : 'bg-green-50 border-green-400 text-green-900'
+                                                }`}
+                                            onClick={() => setExpandSummary(expandSummary === candidate.application_id ? null : candidate.application_id)}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="text-xs font-bold uppercase tracking-wide mb-1 opacity-75">AI Screening Analysis</p>
+                                                    <p className="text-sm font-medium">{candidate.ai_summary.split('|')[0]}</p>
+                                                </div>
+                                            </div>
+                                            {candidate.ai_summary.includes('|') && (
+                                                <div className={`mt-2 text-sm pt-2 border-t ${candidate.ai_summary.includes('⚠️') ? 'border-amber-200' : 'border-green-200'
+                                                    } ${expandSummary === candidate.application_id ? 'block' : 'hidden md:block'}`}>
+                                                    <ul className="list-disc list-inside space-y-1">
+                                                        {candidate.ai_summary.split('|').slice(1).map((item, i) => (
+                                                            <li key={i}>{item.trim()}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
-                                <div className="flex gap-2">
+                                <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
                                     <button
                                         onClick={() => updateStatus(candidate.application_id, 'SHORTLISTED')}
-                                        className="btn-primary text-sm"
+                                        className={`btn-sm ${candidate.application_status === 'SHORTLISTED' ? 'opacity-50 cursor-not-allowed' : 'btn-primary'}`}
                                         disabled={candidate.application_status === 'SHORTLISTED'}
                                     >
                                         Shortlist
                                     </button>
                                     <button
                                         onClick={() => updateStatus(candidate.application_id, 'HOLD')}
-                                        className="btn-secondary text-sm"
+                                        className={`btn-sm ${candidate.application_status === 'HOLD' ? 'opacity-50 cursor-not-allowed' : 'btn-secondary'}`}
                                         disabled={candidate.application_status === 'HOLD'}
                                     >
                                         Hold
                                     </button>
                                     <button
                                         onClick={() => updateStatus(candidate.application_id, 'REJECTED')}
-                                        className="bg-red-100 hover:bg-red-200 text-red-700 font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-red-200 text-red-700 hover:bg-red-50 ${candidate.application_status === 'REJECTED' ? 'opacity-50 cursor-not-allowed bg-red-50' : ''}`}
                                         disabled={candidate.application_status === 'REJECTED'}
                                     >
                                         Reject
                                     </button>
                                     <button
                                         onClick={() => updateStatus(candidate.application_id, 'HIRED')}
-                                        className="bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-purple-200 text-purple-700 hover:bg-purple-50 ${candidate.application_status === 'HIRED' ? 'opacity-50 cursor-not-allowed bg-purple-50' : ''}`}
                                         disabled={candidate.application_status === 'HIRED'}
                                     >
                                         Hire

@@ -1,35 +1,46 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { jobAPI, applicationAPI } from '../services/api';
-import { MessageCircle, Upload, CheckCircle, Loader } from 'lucide-react';
+import { jobAPI, applicationAPI, uploadAPI } from '../services/api';
+import { MessageCircle, Upload, CheckCircle, Loader, Send, ChevronLeft } from 'lucide-react';
+import { chatbotFlow } from '../config/chatbotConfig';
 
 const ChatbotApplication = () => {
     const { jobId } = useParams();
     const [job, setJob] = useState(null);
-    const [currentStep, setCurrentStep] = useState(0);
+    const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
-    const [resumeFile, setResumeFile] = useState(null);
-    const [resumeUrl, setResumeUrl] = useState('');
+
+    // Chat history for the interface
+    const [messages, setMessages] = useState([]);
+    const [inputValue, setInputValue] = useState('');
     const [uploadingResume, setUploadingResume] = useState(false);
+    const messagesEndRef = useRef(null);
 
     const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        totalExperience: '',
-        relevantExperience: '',
-        currentCtc: '',
-        expectedCtc: '',
-        currentLocation: '',
-        noticePeriod: '',
-        skills: '',
+        resumeUrl: ''
     });
 
     useEffect(() => {
         fetchJob();
     }, [jobId]);
+
+    // Auto-scroll to bottom of chat
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    // Initialize chat flow
+    const hasInitialized = useRef(false);
+
+    useEffect(() => {
+        if (job && !hasInitialized.current) {
+            hasInitialized.current = true;
+            // Small delay to ensure render stability
+            setTimeout(() => processStep(0), 100);
+        }
+    }, [job]);
 
     const fetchJob = async () => {
         try {
@@ -42,32 +53,94 @@ const ChatbotApplication = () => {
         }
     };
 
+    const processStep = (index) => {
+        if (index >= chatbotFlow.length) {
+            handleSubmit();
+            return;
+        }
+
+        const step = chatbotFlow[index];
+
+        // Add bot message
+        if (step.type === 'message') {
+            setMessages(prev => [...prev, { type: 'bot', text: step.text }]);
+            setTimeout(() => {
+                processStep(index + 1);
+            }, step.delay || 1000);
+            setCurrentStepIndex(index + 1);
+            return;
+        }
+
+        // Add question
+        setMessages(prev => [...prev, {
+            type: 'bot',
+            text: step.question,
+            inputType: step.type,
+            stepId: step.id
+        }]);
+        setCurrentStepIndex(index);
+    };
+
+    const validateInput = (value, step) => {
+        if (!step.validation) return { isValid: true };
+
+        const { required, minLength, pattern, min, max, custom, message } = step.validation;
+
+        if (required && !value) return { isValid: false, message: message || 'This field is required' };
+        if (minLength && value.length < minLength) return { isValid: false, message: message };
+        if (pattern && !pattern.test(value)) return { isValid: false, message: message };
+        if (min !== undefined && parseFloat(value) < min) return { isValid: false, message: message };
+        if (max !== undefined && parseFloat(value) > max) return { isValid: false, message: message };
+        if (custom && !custom(value, formData)) return { isValid: false, message: message };
+
+        return { isValid: true };
+    };
+
+    const handleUserInput = async (value, type = 'text') => {
+        const currentStep = chatbotFlow[currentStepIndex];
+
+        // Validate
+        const validation = validateInput(value, currentStep);
+        if (!validation.isValid) {
+            setMessages(prev => [...prev, { type: 'error', text: validation.message }]);
+            return;
+        }
+
+        // Add user message
+        if (type !== 'file') {
+            setMessages(prev => [...prev, { type: 'user', text: value }]);
+            setFormData(prev => ({ ...prev, [currentStep.id]: value }));
+        } else {
+            setMessages(prev => [...prev, { type: 'user', text: `Uploaded: ${value.name}` }]);
+        }
+
+        setInputValue('');
+
+        // Move to next step
+        setTimeout(() => {
+            processStep(currentStepIndex + 1);
+        }, 500);
+    };
+
     const handleResumeUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        setResumeFile(file);
         setUploadingResume(true);
-
         try {
-            const { uploadAPI } = await import('../services/api');
+            // Updated to use the correct upload API
             const response = await uploadAPI.uploadResume(file);
-            setResumeUrl(response.data.url);
+            setFormData(prev => ({ ...prev, resumeUrl: response.data.url }));
+            handleUserInput(file, 'file');
         } catch (error) {
-            alert('Failed to upload resume. Please try again.');
+            setMessages(prev => [...prev, { type: 'error', text: 'Upload failed. Please try again.' }]);
         } finally {
             setUploadingResume(false);
         }
     };
 
     const handleSubmit = async () => {
-        if (!resumeUrl) {
-            alert('Please upload your resume before submitting');
-            return;
-        }
-
         setSubmitting(true);
-
         try {
             await applicationAPI.submit({
                 jobId,
@@ -77,114 +150,40 @@ const ChatbotApplication = () => {
                 currentCtc: parseFloat(formData.currentCtc),
                 expectedCtc: parseFloat(formData.expectedCtc),
                 noticePeriod: parseInt(formData.noticePeriod),
-                skills: formData.skills.split(',').map(s => s.trim()),
-                resumeUrl,
+                skills: formData.skills.split(',').map(s => s.trim())
             });
-
             setSubmitted(true);
         } catch (error) {
-            alert('Failed to submit application. Please try again.');
+            console.error('Chatbot submission error:', error);
+            setMessages(prev => [...prev, { type: 'error', text: 'Submission failed. Please try again.' }]);
         } finally {
             setSubmitting(false);
         }
     };
 
-    const questions = [
-        {
-            id: 'name',
-            question: "What's your full name?",
-            type: 'text',
-            placeholder: 'John Doe',
-        },
-        {
-            id: 'email',
-            question: "What's your email address?",
-            type: 'email',
-            placeholder: 'john@example.com',
-        },
-        {
-            id: 'phone',
-            question: "What's your phone number?",
-            type: 'tel',
-            placeholder: '+91 9876543210',
-        },
-        {
-            id: 'totalExperience',
-            question: 'How many years of total experience do you have?',
-            type: 'number',
-            placeholder: '5',
-            step: '0.5',
-        },
-        {
-            id: 'relevantExperience',
-            question: 'How many years of relevant experience do you have?',
-            type: 'number',
-            placeholder: '3',
-            step: '0.5',
-        },
-        {
-            id: 'currentCtc',
-            question: 'What is your current CTC (in LPA)?',
-            type: 'number',
-            placeholder: '12',
-            step: '0.1',
-        },
-        {
-            id: 'expectedCtc',
-            question: 'What is your expected CTC (in LPA)?',
-            type: 'number',
-            placeholder: '15',
-            step: '0.1',
-        },
-        {
-            id: 'currentLocation',
-            question: 'What is your current location?',
-            type: 'text',
-            placeholder: 'Bangalore',
-        },
-        {
-            id: 'noticePeriod',
-            question: 'What is your notice period (in days)?',
-            type: 'number',
-            placeholder: '30',
-        },
-        {
-            id: 'skills',
-            question: 'What are your key skills? (comma-separated)',
-            type: 'text',
-            placeholder: 'React, Node.js, PostgreSQL',
-        },
-    ];
-
-    const currentQuestion = questions[currentStep];
-    const progress = ((currentStep + 1) / (questions.length + 1)) * 100;
-
-    const handleNext = () => {
-        if (formData[currentQuestion.id]) {
-            setCurrentStep(currentStep + 1);
-        }
-    };
-
-    const handleBack = () => {
-        if (currentStep > 0) {
-            setCurrentStep(currentStep - 1);
-        }
-    };
-
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100">
-                <Loader className="w-8 h-8 text-primary-600 animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <Loader className="w-8 h-8 text-primary-600 animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600">Loading interview...</p>
+                </div>
             </div>
         );
     }
 
     if (!job) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100">
-                <div className="card max-w-md text-center">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+                <div className="card max-w-md w-full text-center">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                        <MessageCircle className="w-8 h-8 text-red-600" />
+                    </div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Job Not Found</h2>
-                    <p className="text-gray-600">This job posting is no longer available.</p>
+                    <p className="text-gray-600 mb-4">
+                        The job you are looking for does not exist or has been closed.
+                    </p>
+                    <p className="text-sm text-gray-500">Job ID: {jobId}</p>
                 </div>
             </div>
         );
@@ -192,129 +191,131 @@ const ChatbotApplication = () => {
 
     if (submitted) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100">
-                <div className="card max-w-md text-center animate-fade-in">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+                <div className="card max-w-md w-full text-center animate-fade-in">
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                        <CheckCircle className="w-10 h-10 text-green-600" />
+                        <CheckCircle className="w-8 h-8 text-green-600" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Application Submitted!</h2>
-                    <p className="text-gray-600 mb-4">
-                        Thank you for applying. The recruiter will review your application and get back to you soon.
-                    </p>
-                    <p className="text-sm text-gray-500">
-                        You can close this window now.
+                    <p className="text-gray-600">
+                        Thank you for applying to <strong>{job?.title}</strong>.
+                        We have received your details and resume.
                     </p>
                 </div>
             </div>
         );
     }
 
+    const currentStep = chatbotFlow[currentStepIndex];
+    const progress = ((currentStepIndex) / chatbotFlow.length) * 100;
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 py-8 px-4">
-            <div className="max-w-2xl mx-auto">
-                {/* Job Info */}
-                <div className="card mb-6 animate-fade-in">
-                    <div className="flex items-start gap-4">
-                        <div className="p-3 bg-primary-100 rounded-lg">
-                            <MessageCircle className="w-6 h-6 text-primary-600" />
-                        </div>
-                        <div className="flex-1">
-                            <h1 className="text-2xl font-bold text-gray-900 mb-2">{job.title}</h1>
-                            <p className="text-gray-600">{job.description}</p>
-                        </div>
-                    </div>
+        <div className="flex flex-col h-screen bg-gray-50">
+            {/* Header */}
+            <div className="bg-white shadow-sm px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                    <MessageCircle className="w-6 h-6 text-primary-600" />
                 </div>
+                <div>
+                    <h1 className="font-bold text-gray-900 line-clamp-1">{job?.title}</h1>
+                    <p className="text-xs text-gray-500">Recruiter Assistant</p>
+                </div>
+            </div>
 
-                {/* Progress Bar */}
-                <div className="mb-6">
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            {/* Progress Bar */}
+            <div className="h-1 bg-gray-200">
+                <div
+                    className="h-full bg-primary-600 transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                />
+            </div>
+
+            {/* Chat Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.map((msg, idx) => (
+                    <div
+                        key={idx}
+                        className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
                         <div
-                            className="h-full bg-primary-600 transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                        />
+                            className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.type === 'user'
+                                ? 'bg-primary-600 text-white rounded-br-none'
+                                : msg.type === 'error'
+                                    ? 'bg-red-50 text-red-600 border border-red-100'
+                                    : 'bg-white text-gray-800 shadow-sm rounded-bl-none'
+                                }`}
+                        >
+                            {msg.text}
+                        </div>
                     </div>
-                    <p className="text-sm text-gray-600 mt-2 text-center">
-                        Step {currentStep + 1} of {questions.length + 1}
-                    </p>
-                </div>
+                ))}
 
-                {/* Chatbot Interface */}
-                <div className="card animate-slide-up">
-                    {currentStep < questions.length ? (
-                        <>
-                            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                                {currentQuestion.question}
-                            </h2>
-                            <input
-                                type={currentQuestion.type}
-                                className="input-field mb-4"
-                                placeholder={currentQuestion.placeholder}
-                                value={formData[currentQuestion.id]}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, [currentQuestion.id]: e.target.value })
-                                }
-                                step={currentQuestion.step}
-                                autoFocus
-                                onKeyPress={(e) => e.key === 'Enter' && handleNext()}
-                            />
-                            <div className="flex gap-3">
-                                {currentStep > 0 && (
-                                    <button onClick={handleBack} className="btn-secondary">
-                                        Back
-                                    </button>
-                                )}
-                                <button
-                                    onClick={handleNext}
-                                    className="btn-primary flex-1"
-                                    disabled={!formData[currentQuestion.id]}
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                                Upload Your Resume
-                            </h2>
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4">
-                                {resumeFile ? (
-                                    <div className="flex items-center justify-center gap-2 text-green-600">
-                                        <CheckCircle className="w-5 h-5" />
-                                        <span>{resumeFile.name}</span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                                        <p className="text-gray-600 mb-2">Upload your resume (PDF/DOC)</p>
-                                        <input
-                                            type="file"
-                                            accept=".pdf,.doc,.docx"
-                                            onChange={handleResumeUpload}
-                                            className="hidden"
-                                            id="resume-upload"
-                                        />
-                                        <label htmlFor="resume-upload" className="btn-primary inline-block cursor-pointer">
-                                            {uploadingResume ? 'Uploading...' : 'Choose File'}
-                                        </label>
-                                    </>
-                                )}
-                            </div>
-                            <div className="flex gap-3">
-                                <button onClick={handleBack} className="btn-secondary">
-                                    Back
-                                </button>
-                                <button
-                                    onClick={handleSubmit}
-                                    className="btn-primary flex-1"
-                                    disabled={!resumeUrl || submitting}
-                                >
-                                    {submitting ? 'Submitting...' : 'Submit Application'}
-                                </button>
-                            </div>
-                        </>
-                    )}
-                </div>
+                {/* Typing Indicator */}
+                {(submitting || uploadingResume) && (
+                    <div className="flex justify-start">
+                        <div className="bg-gray-100 rounded-full px-4 py-2 text-xs text-gray-500 animate-pulse">
+                            Processing...
+                        </div>
+                    </div>
+                )}
+
+                <div ref={messagesEndRef} />
+
+                {/* Fallback Start Button */}
+                {!loading && job && messages.length === 0 && (
+                    <div className="flex justify-center mt-10">
+                        <button
+                            onClick={() => processStep(0)}
+                            className="btn-primary flex items-center gap-2"
+                        >
+                            Start Interview
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Input Area */}
+            <div className="bg-white border-t p-4">
+                {currentStep?.type === 'file' ? (
+                    <div className="flex justify-center">
+                        <input
+                            type="file"
+                            accept={currentStep.accept}
+                            onChange={handleResumeUpload}
+                            className="hidden"
+                            id="file-upload"
+                            disabled={uploadingResume}
+                        />
+                        <label
+                            htmlFor="file-upload"
+                            className="btn-primary w-full flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                            {uploadingResume ? <Loader className="animate-spin w-5 h-5" /> : <Upload className="w-5 h-5" />}
+                            Upload Resume
+                        </label>
+                    </div>
+                ) : (
+                    <div className="flex gap-2">
+                        <input
+                            type={currentStep?.type === 'number' ? 'number' : 'text'}
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            placeholder={currentStep?.placeholder || 'Type your answer...'}
+                            className="flex-1 input-field mb-0 rounded-full"
+                            onKeyPress={(e) => e.key === 'Enter' && handleUserInput(inputValue)}
+                            step={currentStep?.step}
+                            autoFocus
+                            disabled={!currentStep || currentStep.type === 'message'}
+                        />
+                        <button
+                            onClick={() => handleUserInput(inputValue)}
+                            disabled={!inputValue || !currentStep || currentStep.type === 'message'}
+                            className="p-3 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <Send className="w-5 h-5" />
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

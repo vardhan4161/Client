@@ -11,7 +11,13 @@ const jobSchema = new mongoose.Schema({
     recruiter_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
-    requirements: { type: Object, default: {} },
+    requirements: {
+        minExperience: Number,
+        maxNoticePeriod: Number,
+        maxExpectedCtc: Number,
+        requiredSkills: [String],
+        preferredLocation: String
+    },
     status: { type: String, enum: ['OPEN', 'CLOSED', 'DRAFT'], default: 'OPEN' },
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now }
@@ -41,6 +47,8 @@ const applicationSchema = new mongoose.Schema({
     },
     match_score: Number,
     ai_summary: String,
+    recruiter_notes: { type: String, default: '' },
+    last_contacted: Date,
     created_at: { type: Date, default: Date.now }
 });
 

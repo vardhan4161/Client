@@ -8,7 +8,7 @@ const router = express.Router();
 
 // Validation schemas
 const submitApplicationSchema = Joi.object({
-    jobId: Joi.string().uuid().required(),
+    jobId: Joi.string().required(),
     name: Joi.string().min(2).required(),
     email: Joi.string().email().required(),
     phone: Joi.string().min(10).required(),

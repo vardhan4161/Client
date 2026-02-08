@@ -5,7 +5,7 @@
 ```mermaid
 graph TD
     Client[Client (React + Tailwind)] -->|HTTP/REST| Server[Server (Node.js + Express)]
-    Server -->|SQL| DB[(PostgreSQL)]
+    Server -->|Mongoose| DB[(MongoDB)]
     Server -->|File Upload| Storage[File Storage (Local/Cloud)]
     Recruiter[Recruiter] -->|Uses| Client
     Candidate[Candidate] -->|Uses| Client
@@ -14,8 +14,8 @@ graph TD
 ## 2. Tech Stack
 - **Frontend:** React.js, Tailwind CSS, Lucide React (Icons)
 - **Backend:** Node.js, Express.js, Multer (File Upload)
-- **Database:** PostgreSQL
-- **Infrastructure:** Docker
+- **Database:** MongoDB (Mongoose ODM)
+- **Infrastructure:** Docker (Optional)
 
 ## 3. Database Schema (Conceptual)
 
