@@ -1,0 +1,39 @@
+services:
+  # -----------------------------
+  # BACKEND SERVICE (Node.js API)
+  # -----------------------------
+  - type: web
+    name: hire-api
+    env: node
+    root: server
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: MONGO_URI
+        sync: false # User must provide this
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+
+  # -----------------------------
+  # FRONTEND SERVICE (React App)
+  # -----------------------------
+  - type: web
+    name: hire-client
+    env: static
+    root: client
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: hire-api
+          property: url
