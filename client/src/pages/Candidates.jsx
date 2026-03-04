@@ -129,13 +129,13 @@ const Candidates = () => {
                                 <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
                                     <div className="flex-1">
                                         <div className="flex flex-wrap items-center gap-3 mb-2">
-                                            <h3 className="text-lg font-bold text-gray-900">{candidate.name}</h3>
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${statusColors[candidate.application_status]}`}>
+                                            <h3 className="text-lg font-black text-slate-900">{candidate.name}</h3>
+                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm ${statusColors[candidate.application_status]}`}>
                                                 {candidate.application_status}
                                             </span>
-                                            <div className="flex items-center gap-1 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
-                                                <span className="text-xs text-gray-500 font-medium">MATCH SCORE</span>
-                                                <span className={`text-sm font-bold ${getScoreColor(candidate.match_score)}`}>
+                                            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Match Score</span>
+                                                <span className={`text-sm font-black ${getScoreColor(candidate.match_score)}`}>
                                                     {candidate.match_score}%
                                                 </span>
                                             </div>

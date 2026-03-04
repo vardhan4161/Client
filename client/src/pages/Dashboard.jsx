@@ -42,61 +42,75 @@ const Dashboard = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
-            <header className="bg-white shadow-sm border-b border-gray-200">
+            <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex justify-between items-center">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Recruiter Dashboard</h1>
-                            <p className="text-gray-600">Welcome back, {user?.name}</p>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-200">
+                                <Briefcase className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-black tracking-tight text-slate-900">
+                                    Talent<span className="text-primary-600">Sethu</span>
+                                </h1>
+                                <p className="text-xs font-medium text-slate-500 uppercase tracking-widest">Recruiter Portal</p>
+                            </div>
                         </div>
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            Logout
-                        </button>
+                        <div className="flex items-center gap-6">
+                            <span className="text-sm font-medium text-slate-600 hidden sm:block">
+                                Welcome, <span className="text-slate-900">{user?.name}</span>
+                            </span>
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-red-600 transition-colors"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Logout
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
                 {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="card">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <div className="card group hover:border-primary-200 transition-all duration-300">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-primary-100 rounded-lg">
+                            <div className="p-3 bg-primary-50 rounded-xl group-hover:bg-primary-100 transition-colors">
                                 <Briefcase className="w-6 h-6 text-primary-600" />
                             </div>
                             <div>
-                                <p className="text-gray-600 text-sm">Total Jobs</p>
-                                <p className="text-2xl font-bold text-gray-900">{jobs.length}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="card">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-green-100 rounded-lg">
-                                <Briefcase className="w-6 h-6 text-green-600" />
-                            </div>
-                            <div>
-                                <p className="text-gray-600 text-sm">Open Jobs</p>
-                                <p className="text-2xl font-bold text-gray-900">
-                                    {jobs.filter(j => j.status === 'OPEN').length}
+                                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Jobs</p>
+                                <p className="text-3xl font-black text-slate-900">
+                                    {loading ? '...' : jobs.length}
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <div className="card">
+                    <div className="card group hover:border-emerald-200 transition-all duration-300">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-purple-100 rounded-lg">
-                                <Users className="w-6 h-6 text-purple-600" />
+                            <div className="p-3 bg-emerald-50 rounded-xl group-hover:bg-emerald-100 transition-colors">
+                                <Check className="w-6 h-6 text-emerald-600" />
                             </div>
                             <div>
-                                <p className="text-gray-600 text-sm">Total Applicants</p>
-                                <p className="text-2xl font-bold text-gray-900">
-                                    {jobs.reduce((sum, job) => sum + (job.applicantCount || 0), 0)}
+                                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Active Status</p>
+                                <p className="text-3xl font-black text-slate-900">
+                                    {loading ? '...' : jobs.filter(j => j.status === 'OPEN').length}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="card group hover:border-violet-200 transition-all duration-300">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-violet-50 rounded-xl group-hover:bg-violet-100 transition-colors">
+                                <Users className="w-6 h-6 text-violet-600" />
+                            </div>
+                            <div>
+                                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Talent</p>
+                                <p className="text-3xl font-black text-slate-900">
+                                    {loading ? '...' : jobs.reduce((sum, job) => sum + (job.applicantCount || 0), 0)}
                                 </p>
                             </div>
                         </div>
@@ -104,14 +118,17 @@ const Dashboard = () => {
                 </div>
 
                 {/* Jobs Section */}
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">Your Jobs</h2>
+                <div className="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 className="text-2xl font-black text-slate-900">Job Pipeline</h2>
+                        <p className="text-slate-500 text-sm">Manage your open positions and talent flow</p>
+                    </div>
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="btn-primary flex items-center gap-2"
+                        className="btn-primary flex items-center gap-2 shadow-lg shadow-primary-200 px-6 py-3"
                     >
                         <Plus className="w-5 h-5" />
-                        Create Job
+                        New Posting
                     </button>
                 </div>
 

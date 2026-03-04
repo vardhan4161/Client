@@ -2,7 +2,7 @@ export const chatbotFlow = [
     {
         id: 'intro',
         type: 'message',
-        text: "Hi! I'm the automated recruiter assistant. I'll help you apply for this role. It will only take about 2 minutes.",
+        text: "Hi! I'm the TalentSethu Assistant. I'll help you bridge the gap to this exciting role. It will only take about 2 minutes.",
         delay: 1000
     },
     {

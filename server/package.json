@@ -1,7 +1,7 @@
 {
-  "name": "hire-server",
+  "name": "talentsethu-server",
   "version": "1.0.0",
-  "description": "Backend server for Recruiter Hiring Platform",
+  "description": "Backend server for TalentSethu - The Bridge to Exceptional Talent",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

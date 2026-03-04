@@ -212,13 +212,24 @@ const ChatbotApplication = () => {
     return (
         <div className="flex flex-col h-screen bg-gray-50">
             {/* Header */}
-            <div className="bg-white shadow-sm px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 text-primary-600" />
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200 transform -rotate-3">
+                        <MessageCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">
+                            Talent<span className="text-primary-600">Sethu</span>
+                        </h1>
+                        <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">AI Assistant</p>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="font-bold text-gray-900 line-clamp-1">{job?.title}</h1>
-                    <p className="text-xs text-gray-500">Recruiter Assistant</p>
+                <div className="hidden sm:block text-right">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Applying for</p>
+                    <p className="text-sm font-black text-slate-800 line-clamp-1">{job?.title}</p>
                 </div>
             </div>
 
