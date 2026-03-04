@@ -150,7 +150,7 @@ const ChatbotApplication = () => {
                 currentCtc: parseFloat(formData.currentCtc),
                 expectedCtc: parseFloat(formData.expectedCtc),
                 noticePeriod: parseInt(formData.noticePeriod),
-                skills: formData.skills.split(',').map(s => s.trim())
+                skills: (formData.skills || '').split(',').map(s => s.trim()).filter(s => s !== '')
             });
             setSubmitted(true);
         } catch (error) {

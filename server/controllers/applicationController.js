@@ -1,4 +1,7 @@
 const { Job, Candidate, Application } = require('../models');
+const { analyzeResume } = require('../utils/resumeParser');
+const path = require('path');
+const fs = require('fs');
 
 // Enhanced scoring algorithm
 const calculateMatchScore = (candidate, job) => {
@@ -16,7 +19,8 @@ const calculateMatchScore = (candidate, job) => {
         skills,
         noticePeriod,
         expectedCtc,
-        currentLocation
+        currentLocation,
+        confirmedSkills = []
     } = candidate;
 
     let score = 0;
@@ -38,23 +42,34 @@ const calculateMatchScore = (candidate, job) => {
     }
 
     // 2. Skills Matching (25 points)
-    if (requirements.requiredSkills && requirements.requiredSkills.length > 0 && skills && skills.length > 0) {
-        const candidateSkills = skills.map(s => s.toLowerCase().trim());
+    if (requirements.requiredSkills && requirements.requiredSkills.length > 0) {
+        const candidateSkills = (skills || []).map(s => s.toLowerCase().trim());
         const requiredSkills = requirements.requiredSkills.map(s => s.toLowerCase().trim());
+        const docSkills = (confirmedSkills || []).map(s => s.toLowerCase().trim());
 
+        // Skills matched from Chatbot or Resume
         const matchedSkills = requiredSkills.filter(req =>
-            candidateSkills.some(cand =>
-                cand.includes(req) || req.includes(cand) || cand === req
-            )
+            candidateSkills.some(cand => cand.includes(req) || req.includes(cand)) ||
+            docSkills.some(doc => doc.includes(req) || req.includes(doc))
         );
 
         const skillMatchPercent = (matchedSkills.length / requiredSkills.length) * 100;
         score += (skillMatchPercent / 100) * 25;
 
+        // Bonus points for skills EXPLICITLY confirmed by the resume file (up to 5 points)
+        const confirmedMatchCount = docSkills.filter(doc =>
+            requiredSkills.some(req => doc.includes(req) || req.includes(doc))
+        ).length;
+
+        if (confirmedMatchCount > 0) {
+            score += Math.min(confirmedMatchCount * 1, 5);
+            strengths.push(`${confirmedMatchCount} skills confirmed by resume`);
+        }
+
         if (skillMatchPercent >= 80) {
-            strengths.push(`Strong skill match (${matchedSkills.length}/${requiredSkills.length})`);
+            strengths.push(`Strong overall skill match (${matchedSkills.length}/${requiredSkills.length})`);
         } else if (skillMatchPercent < 50) {
-            flags.push(`⚠️ Skills: ${matchedSkills.length}/${requiredSkills.length} matched`);
+            flags.push(`⚠️ Skills: Only ${matchedSkills.length}/${requiredSkills.length} matched`);
         }
     } else {
         score += 12;
@@ -135,6 +150,7 @@ const calculateMatchScore = (candidate, job) => {
 // Submit application (from chatbot)
 const submitApplication = async (req, res) => {
     try {
+        console.log(`[SUBMIT] Received application for email: ${req.body.email}, JobId: ${req.body.jobId}`);
         const {
             jobId,
             name,
@@ -150,11 +166,16 @@ const submitApplication = async (req, res) => {
             resumeUrl
         } = req.body;
 
+        if (!jobId || !email) {
+            console.error('[SUBMIT] Missing required fields: jobId or email');
+            return res.status(400).json({ error: 'Job ID and Email are required' });
+        }
+
         // Find or create candidate
         let candidate = await Candidate.findOne({ email });
 
         if (candidate) {
-            // Update existing candidate
+            console.log(`[SUBMIT] Updating existing candidate: ${candidate._id}`);
             candidate.name = name;
             candidate.phone = phone;
             candidate.skills = skills;
@@ -166,7 +187,7 @@ const submitApplication = async (req, res) => {
             candidate.resume_url = resumeUrl;
             await candidate.save();
         } else {
-            // Create new candidate
+            console.log(`[SUBMIT] Creating new candidate for email: ${email}`);
             candidate = await Candidate.create({
                 name,
                 email,
@@ -183,13 +204,38 @@ const submitApplication = async (req, res) => {
 
         // Get job and calculate match score
         const job = await Job.findById(jobId);
+        if (!job) {
+            console.error(`[SUBMIT] Job not found: ${jobId}`);
+            return res.status(404).json({ error: 'Job not found' });
+        }
+
+        // --- NEW: RESUME AI ANALYSIS ---
+        let confirmedSkills = [];
+        if (resumeUrl) {
+            try {
+                const fileName = path.basename(resumeUrl);
+                const uploadDir = process.env.UPLOAD_DIR || './uploads';
+                const resumeFilePath = path.join(process.cwd(), uploadDir, fileName);
+
+                console.log(`[AI ANALYSIS] Analyzing resume: ${resumeFilePath}`);
+                const analysis = await analyzeResume(resumeFilePath, job.requirements?.requiredSkills || []);
+                confirmedSkills = analysis.foundSkills;
+                console.log(`[AI ANALYSIS] Skills found in document: ${confirmedSkills.join(', ')}`);
+            } catch (pError) {
+                console.error('[AI ANALYSIS] Parsing error:', pError);
+            }
+        }
+
         const scoring = calculateMatchScore({
             relevantExperience,
             skills,
             noticePeriod,
             expectedCtc,
-            currentLocation
+            currentLocation,
+            confirmedSkills
         }, job);
+
+        console.log(`[SUBMIT] Calculated Match Score: ${scoring.score}%`);
 
         // Create or update application
         const application = await Application.findOneAndUpdate(
@@ -202,6 +248,8 @@ const submitApplication = async (req, res) => {
             { new: true, upsert: true }
         );
 
+        console.log(`[SUBMIT] Application saved/updated: ${application._id}`);
+
         res.status(201).json({
             message: 'Application submitted successfully',
             application,
@@ -209,13 +257,10 @@ const submitApplication = async (req, res) => {
             autoStatus: scoring.status
         });
     } catch (error) {
-        console.error('Submit application error:', error);
+        console.error('[SUBMIT] Error in submission handler:', error);
         res.status(500).json({ error: 'Failed to submit application' });
     }
 };
-
-const fs = require('fs');
-const path = require('path');
 
 // Get candidates for a job
 const getCandidates = async (req, res) => {

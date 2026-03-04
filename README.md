@@ -29,29 +29,16 @@ A modern web-based recruitment platform that automates candidate screening throu
 ## 📋 Prerequisites
 
 - Node.js (v16 or higher)
-- PostgreSQL (v12 or higher)
 - npm or yarn
 
 ## 🚀 Installation & Setup
 
 ### 1. Clone the Repository
 ```bash
-cd d:/Hire
+git clone https://github.com/vardhan4161/Client
 ```
 
-### 2. Database Setup
-
-Create a PostgreSQL database:
-```bash
-createdb hire_db
-```
-
-Run the schema:
-```bash
-psql -d hire_db -f server/db/schema.sql
-```
-
-### 3. Backend Setup
+### 2. Backend Setup
 
 ```bash
 cd server
@@ -61,11 +48,12 @@ npm install
 Create `.env` file in `server/` directory:
 ```env
 PORT=5000
-DATABASE_URL=postgresql://username:password@localhost:5432/hire_db
+MONGODB_URI=your_mongodb_uri_here
 JWT_SECRET=your_secret_key_here
 NODE_ENV=development
 UPLOAD_DIR=./uploads
 ```
+*(Leave MONGODB_URI blank to use the built-in in-memory database fallback)*
 
 Start the backend server:
 ```bash

@@ -47,11 +47,15 @@ const upload = multer({
 // Upload handler
 const uploadResume = (req, res) => {
     try {
+        console.log(`[UPLOAD] Received request to upload resume: ${req.file ? req.file.originalname : 'No file'}`);
         if (!req.file) {
+            console.error('[UPLOAD] No file found in request');
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
         const fileUrl = `/uploads/${req.file.filename}`;
+        console.log(`[UPLOAD] File saved to: ${req.file.path}`);
+        console.log(`[UPLOAD] Returning URL: ${fileUrl}`);
 
         res.json({
             message: 'File uploaded successfully',
@@ -59,7 +63,7 @@ const uploadResume = (req, res) => {
             filename: req.file.filename
         });
     } catch (error) {
-        console.error('Upload error:', error);
+        console.error('[UPLOAD] Error handler triggered:', error);
         res.status(500).json({ error: 'File upload failed' });
     }
 };
