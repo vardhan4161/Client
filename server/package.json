@@ -1,7 +1,7 @@
 {
-  "name": "talentsethu-server",
+  "name": "talentsetu-server",
   "version": "1.0.0",
-  "description": "Backend server for TalentSethu - The Bridge to Exceptional Talent",
+  "description": "Backend server for TalentSetu.ai - The Intelligent Bridge to Talent",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

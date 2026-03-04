@@ -214,17 +214,15 @@ const ChatbotApplication = () => {
             {/* Header */}
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200 transform -rotate-3">
-                        <MessageCircle className="w-6 h-6 text-white" />
+                    <div className="relative">
+                        <img src={owlMascot} alt="Assistant" className="w-12 h-12 rounded-2xl shadow-lg border-2 border-primary-50" />
+                        <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></span>
                     </div>
                     <div>
                         <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">
-                            Talent<span className="text-primary-600">Sethu</span>
+                            Talent<span className="text-primary-600">Setu.ai</span>
                         </h1>
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">AI Assistant</p>
-                        </div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Owl Assistant</p>
                     </div>
                 </div>
                 <div className="hidden sm:block text-right">

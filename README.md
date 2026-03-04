@@ -1,13 +1,13 @@
-# TalentSethu 🚀
+# TalentSetu.ai 🚀
 **The Bridge to Exceptional Talent**
 
-TalentSethu is a modern web-based recruitment platform that automates candidate screening through an intelligent chatbot interface.
+TalentSetu.ai is a modern web-based recruitment platform that automates candidate screening through an intelligent chatbot interface.
 
 ## 🎯 Features
 
 - **Automated Chatbot Screening**: Job-specific chatbot that collects candidate information
 - **Smart AI Matching**: Intelligent scoring and gap analysis
-- **TalentSethu Dashboard**: Manage jobs and review candidates
+- **TalentSetu.ai Dashboard**: Manage jobs and review candidates
 - **Candidate Database**: Searchable profiles with filtering
 - **Resume Insight**: Automated skill extraction and verification
 

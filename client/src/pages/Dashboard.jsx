@@ -43,26 +43,23 @@ const Dashboard = () => {
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
             <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
                     <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-200">
-                                <Briefcase className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                                    Talent<span className="text-primary-600">Sethu</span>
-                                </h1>
-                                <p className="text-xs font-medium text-slate-500 uppercase tracking-widest">Recruiter Portal</p>
-                            </div>
+                        <div className="flex items-center gap-4">
+                            <img src={logo} alt="TalentSetu.ai" className="h-10" />
+                            <div className="h-6 w-[1px] bg-slate-200 hidden sm:block"></div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hidden sm:block">Recruiter Hub</p>
                         </div>
                         <div className="flex items-center gap-6">
-                            <span className="text-sm font-medium text-slate-600 hidden sm:block">
-                                Welcome, <span className="text-slate-900">{user?.name}</span>
-                            </span>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100">
+                                <img src={owlSmall} alt="" className="w-5 h-5 rounded-full" />
+                                <span className="text-sm font-medium text-slate-600">
+                                    Hey, <span className="text-slate-900 font-bold">{user?.name}</span>
+                                </span>
+                            </div>
                             <button
                                 onClick={handleLogout}
-                                className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-red-600 transition-colors"
+                                className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-red-600 transition-colors"
                             >
                                 <LogOut className="w-4 h-4" />
                                 Logout
