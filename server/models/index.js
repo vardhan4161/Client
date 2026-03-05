@@ -47,6 +47,11 @@ const applicationSchema = new mongoose.Schema({
     },
     match_score: Number,
     ai_summary: String,
+    gemini_data: {
+        type: Map,
+        of: mongoose.Schema.Types.Mixed,
+        default: {}
+    },
     recruiter_notes: { type: String, default: '' },
     last_contacted: Date,
     created_at: { type: Date, default: Date.now }

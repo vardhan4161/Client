@@ -76,4 +76,5 @@ const analyzeResume = async (filePath, requiredSkills) => {
     }
 };
 
-module.exports = { analyzeResume };
+
+module.exports = { parseResume: analyzeResume, extractTextFromFile, matchSkills };

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { jobAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Briefcase, Users, LogOut, ExternalLink, Copy, Check } from 'lucide-react';
+import logo from '../assets/logo.png';
+import owlSmall from '../assets/owl-mascot.png';
 
 const Dashboard = () => {
     const [jobs, setJobs] = useState([]);

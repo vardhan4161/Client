@@ -200,26 +200,63 @@ const Candidates = () => {
                                 {candidate.ai_summary && (
                                     <div className="mb-4">
                                         <div
-                                            className={`p-4 rounded-lg border-l-4 cursor-pointer transition-colors ${candidate.ai_summary.includes('⚠️')
-                                                ? 'bg-amber-50 border-amber-400 text-amber-900'
-                                                : 'bg-green-50 border-green-400 text-green-900'
+                                            className={`p-5 rounded-xl border cursor-pointer transition-all hover:shadow-md ${candidate.match_score >= 80
+                                                ? 'bg-indigo-50 border-indigo-200 text-indigo-900'
+                                                : candidate.match_score >= 60
+                                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                                                    : 'bg-slate-50 border-slate-200 text-slate-900'
                                                 }`}
                                             onClick={() => setExpandSummary(expandSummary === candidate.application_id ? null : candidate.application_id)}
                                         >
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <p className="text-xs font-bold uppercase tracking-wide mb-1 opacity-75">AI Screening Analysis</p>
-                                                    <p className="text-sm font-medium">{candidate.ai_summary.split('|')[0]}</p>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`p-1.5 rounded-lg ${candidate.match_score >= 80 ? 'bg-indigo-600' : 'bg-slate-700'}`}>
+                                                        <Star className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">TalentSetu AI Analysis</p>
+                                                        <p className="text-lg font-black">{candidate.match_score}% Match Score</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${candidate.match_score >= 80 ? 'bg-indigo-200 text-indigo-800' : 'bg-slate-200 text-slate-800'}`}>
+                                                        {candidate.application_status}
+                                                    </span>
                                                 </div>
                                             </div>
-                                            {candidate.ai_summary.includes('|') && (
-                                                <div className={`mt-2 text-sm pt-2 border-t ${candidate.ai_summary.includes('⚠️') ? 'border-amber-200' : 'border-green-200'
-                                                    } ${expandSummary === candidate.application_id ? 'block' : 'hidden md:block'}`}>
-                                                    <ul className="list-disc list-inside space-y-1">
-                                                        {candidate.ai_summary.split('|').slice(1).map((item, i) => (
-                                                            <li key={i}>{item.trim()}</li>
-                                                        ))}
-                                                    </ul>
+
+                                            <p className="text-sm font-medium leading-relaxed mb-4">
+                                                {candidate.ai_summary}
+                                            </p>
+
+                                            {(expandSummary === candidate.application_id || true) && candidate.gemini_data && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-black/5">
+                                                    <div>
+                                                        <h4 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                                            Key Strengths
+                                                        </h4>
+                                                        <ul className="space-y-1">
+                                                            {(candidate.gemini_data.strengths || []).map((s, i) => (
+                                                                <li key={i} className="text-xs font-medium flex gap-2">
+                                                                    <span className="text-emerald-500">•</span> {s}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                                            <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                                                            Areas of Concern
+                                                        </h4>
+                                                        <ul className="space-y-1">
+                                                            {(candidate.gemini_data.concerns || []).map((c, i) => (
+                                                                <li key={i} className="text-xs font-medium flex gap-2">
+                                                                    <span className="text-amber-500">•</span> {c}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

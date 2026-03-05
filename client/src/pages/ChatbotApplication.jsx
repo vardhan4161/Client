@@ -192,14 +192,32 @@ const ChatbotApplication = () => {
     if (submitted) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-                <div className="card max-w-md w-full text-center animate-fade-in">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                        <CheckCircle className="w-8 h-8 text-green-600" />
+                <div className="card max-w-md w-full text-center animate-fade-in border-none shadow-2xl p-10">
+                    <img src={owlMascot} alt="TalentSetu Owl" className="w-40 h-40 mx-auto mb-6 drop-shadow-xl" />
+                    <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-full mb-4">
+                        <CheckCircle className="w-6 h-6 text-emerald-600" />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Application Submitted!</h2>
-                    <p className="text-gray-600">
+                    <h2 className="text-3xl font-black text-slate-900 mb-2">Application Received!</h2>
+                    <p className="text-slate-500 font-medium mb-8">
                         Thank you for applying to <strong>{job?.title}</strong>.
-                        We have received your details and resume.
+                    </p>
+
+                    {aiFeedback && (
+                        <div className="bg-primary-50 border border-primary-100 rounded-2xl p-6 text-left mb-6">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="bg-primary-600 text-white font-black px-3 py-1 rounded-lg text-sm">
+                                    {aiFeedback.score}% Match
+                                </div>
+                                <span className="text-[10px] font-black text-primary-400 uppercase tracking-widest">Owl Wisdom</span>
+                            </div>
+                            <p className="text-sm font-bold text-slate-800 leading-relaxed italic">
+                                "{aiFeedback.summary}"
+                            </p>
+                        </div>
+                    )}
+
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                        We'll be in touch soon via email.
                     </p>
                 </div>
             </div>

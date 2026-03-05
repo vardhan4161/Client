@@ -147,6 +147,11 @@ const calculateMatchScore = (candidate, job) => {
     return { score: matchScore, summary: aiSummary, status: autoStatus };
 };
 
+const { analyzeResume: analyzeResumeAI } = require('../services/geminiService');
+// ... (rest of imports)
+
+// ... (keep calculateMatchScore for fallback if needed)
+
 // Submit application (from chatbot)
 const submitApplication = async (req, res) => {
     try {
@@ -175,10 +180,9 @@ const submitApplication = async (req, res) => {
         let candidate = await Candidate.findOne({ email });
 
         if (candidate) {
-            console.log(`[SUBMIT] Updating existing candidate: ${candidate._id}`);
             candidate.name = name;
             candidate.phone = phone;
-            candidate.skills = skills;
+            candidate.skills = Array.isArray(skills) ? skills : (skills ? String(skills).split(',') : []);
             candidate.experience_years = totalExperience;
             candidate.current_ctc = currentCtc;
             candidate.expected_ctc = expectedCtc;
@@ -187,12 +191,11 @@ const submitApplication = async (req, res) => {
             candidate.resume_url = resumeUrl;
             await candidate.save();
         } else {
-            console.log(`[SUBMIT] Creating new candidate for email: ${email}`);
             candidate = await Candidate.create({
                 name,
                 email,
                 phone,
-                skills,
+                skills: Array.isArray(skills) ? skills : (skills ? String(skills).split(',') : []),
                 experience_years: totalExperience,
                 current_ctc: currentCtc,
                 expected_ctc: expectedCtc,
@@ -202,59 +205,80 @@ const submitApplication = async (req, res) => {
             });
         }
 
-        // Get job and calculate match score
+        // Get job
         const job = await Job.findById(jobId);
         if (!job) {
-            console.error(`[SUBMIT] Job not found: ${jobId}`);
             return res.status(404).json({ error: 'Job not found' });
         }
 
-        // --- NEW: RESUME AI ANALYSIS ---
-        let confirmedSkills = [];
+        // --- NEW: ADVANCED AI ANALYSIS WITH GEMINI ---
+        let aiAnalysis = {
+            matchScore: 0,
+            summary: 'Reviewing...',
+            topSkills: [],
+            missingSkills: [],
+            strengths: [],
+            concerns: []
+        };
+
         if (resumeUrl) {
             try {
                 const fileName = path.basename(resumeUrl);
                 const uploadDir = process.env.UPLOAD_DIR || './uploads';
                 const resumeFilePath = path.join(process.cwd(), uploadDir, fileName);
 
-                console.log(`[AI ANALYSIS] Analyzing resume: ${resumeFilePath}`);
-                const analysis = await analyzeResume(resumeFilePath, job.requirements?.requiredSkills || []);
-                confirmedSkills = analysis.foundSkills;
-                console.log(`[AI ANALYSIS] Skills found in document: ${confirmedSkills.join(', ')}`);
+                // Use the parser to get raw text instead of just keywords
+                const { parseResume } = require('../utils/resumeParser');
+                const parsingResult = await parseResume(resumeFilePath);
+
+                console.log(`[GEMINI] Analyzing resume for ${name}...`);
+                aiAnalysis = await analyzeResumeAI(
+                    parsingResult.text,
+                    job.title,
+                    job.description,
+                    {
+                        name,
+                        totalExperience,
+                        relevantExperience,
+                        skills: Array.isArray(skills) ? skills : []
+                    }
+                );
+                console.log(`[GEMINI] Match Score: ${aiAnalysis.matchScore}%`);
             } catch (pError) {
-                console.error('[AI ANALYSIS] Parsing error:', pError);
+                console.error('[GEMINI] Analysis error:', pError);
             }
         }
 
-        const scoring = calculateMatchScore({
-            relevantExperience,
-            skills,
-            noticePeriod,
-            expectedCtc,
-            currentLocation,
-            confirmedSkills
-        }, job);
-
-        console.log(`[SUBMIT] Calculated Match Score: ${scoring.score}%`);
+        // Auto-assign status based on Gemini score
+        let autoStatus = 'APPLIED';
+        if (aiAnalysis.matchScore >= 80) autoStatus = 'SHORTLISTED';
+        else if (aiAnalysis.matchScore >= 60) autoStatus = 'HOLD';
+        else if (aiAnalysis.matchScore < 40) autoStatus = 'REJECTED';
 
         // Create or update application
         const application = await Application.findOneAndUpdate(
             { job_id: jobId, candidate_id: candidate._id },
             {
-                match_score: scoring.score,
-                ai_summary: scoring.summary,
-                status: scoring.status
+                match_score: aiAnalysis.matchScore,
+                ai_summary: aiAnalysis.summary,
+                status: autoStatus,
+                // We'll store the extra Gemini insights in the Application model
+                // Note: You might want to update your Application Schema to hold these
+                gemini_data: {
+                    topSkills: aiAnalysis.topSkills,
+                    missingSkills: aiAnalysis.missingSkills,
+                    strengths: aiAnalysis.strengths,
+                    concerns: aiAnalysis.concerns
+                }
             },
             { new: true, upsert: true }
         );
 
-        console.log(`[SUBMIT] Application saved/updated: ${application._id}`);
-
         res.status(201).json({
             message: 'Application submitted successfully',
             application,
-            matchScore: scoring.score,
-            autoStatus: scoring.status
+            matchScore: aiAnalysis.matchScore,
+            autoStatus
         });
     } catch (error) {
         console.error('[SUBMIT] Error in submission handler:', error);
