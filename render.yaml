@@ -26,7 +26,6 @@ services:
     name: hire-client
     env: static
     root: client
-    plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     routes:
