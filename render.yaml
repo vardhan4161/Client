@@ -22,15 +22,16 @@ services:
         value: ./uploads
       - key: FRONTEND_URL
         fromService:
-          type: static_site
+          type: web
           name: hire-client
           property: url
 
   # -----------------------------
   # FRONTEND SERVICE (React App)
   # -----------------------------
-  - type: static_site
+  - type: web
     name: hire-client
+    env: static
     root: client
     plan: free
     buildCommand: npm install && npm run build
