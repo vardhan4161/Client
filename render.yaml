@@ -1,3 +1,4 @@
+services:
   # -----------------------------
   # BACKEND SERVICE (Node.js API)
   # -----------------------------
@@ -44,4 +45,3 @@
           type: web
           name: hire-api
           property: hostWithScheme
-
