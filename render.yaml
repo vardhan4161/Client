@@ -11,13 +11,13 @@ services:
     startCommand: node index.js
     envVars:
       - key: MONGODB_URI
-        sync: false # User must provide a MongoDB Atlas URI
+        sync: false # User: Provide your MongoDB Atlas URI here
       - key: JWT_SECRET
         generateValue: true
       - key: NODE_ENV
         value: production
       - key: GEMINI_API_KEY
-        sync: false # User must provide their Gemini API key
+        sync: false # User: Provide your Google Gemini API key here
       - key: UPLOAD_DIR
         value: ./uploads
       - key: FRONTEND_URL
@@ -46,5 +46,4 @@ services:
           type: web
           name: hire-api
           property: hostWithScheme
-        value: /api
 
