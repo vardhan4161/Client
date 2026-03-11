@@ -4,7 +4,7 @@ import { applicationAPI } from '../services/api';
 import { ArrowLeft, Download, Filter, Search, Loader, Star, CheckCircle2, AlertCircle } from 'lucide-react';
 
 // Use env var for API base so resume links work in production too
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api')).replace('/api', '');
 
 const Candidates = () => {
     const { jobId } = useParams();
