@@ -1,12 +1,11 @@
 services:
-  # BACKEND
+  # SINGLE FULL-STACK SERVICE
   - type: web
-    name: hire-api
+    name: talentsetu-app
     env: node
-    root: server
     plan: free
-    buildCommand: npm install
-    startCommand: node index.js
+    buildCommand: npm run build
+    startCommand: npm start
     envVars:
       - key: MONGODB_URI
         sync: false
@@ -18,20 +17,3 @@ services:
         sync: false
       - key: UPLOAD_DIR
         value: ./uploads
-      - key: FRONTEND_URL
-        value: https://replace-with-your-client-url.onrender.com
-
-  # FRONTEND
-  - type: web
-    name: hire-client
-    env: static
-    root: client
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_API_URL
-        value: https://replace-with-your-api-url.onrender.com/api
