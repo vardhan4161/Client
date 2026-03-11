@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jobAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Briefcase, Users, LogOut, ExternalLink, Copy, Check } from 'lucide-react';
+import { Plus, Briefcase, Users, LogOut, ExternalLink, Copy, Check, Star } from 'lucide-react';
 import logo from '../assets/logo.png';
 import owlSmall from '../assets/owl-mascot.png';
 
@@ -10,6 +10,7 @@ const Dashboard = () => {
     const [jobs, setJobs] = useState([]);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState('');
     const [copiedId, setCopiedId] = useState(null);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
@@ -20,10 +21,12 @@ const Dashboard = () => {
 
     const fetchJobs = async () => {
         try {
+            setFetchError('');
             const response = await jobAPI.getAll();
-            setJobs(response.data.jobs);
+            setJobs(response.data.data?.jobs || response.data.jobs || []);
         } catch (error) {
             console.error('Failed to fetch jobs:', error);
+            setFetchError('Failed to load jobs. Please refresh.');
         } finally {
             setLoading(false);
         }
@@ -74,7 +77,7 @@ const Dashboard = () => {
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
                 {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                     <div className="card group hover:border-primary-200 transition-all duration-300">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-primary-50 rounded-xl group-hover:bg-primary-100 transition-colors">
@@ -110,6 +113,19 @@ const Dashboard = () => {
                                 <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Talent</p>
                                 <p className="text-3xl font-black text-slate-900">
                                     {loading ? '...' : jobs.reduce((sum, job) => sum + (job.applicantCount || 0), 0)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="card group hover:border-orange-200 transition-all duration-300">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-orange-50 rounded-xl group-hover:bg-orange-100 transition-colors">
+                                <Star className="w-6 h-6 text-orange-600" />
+                            </div>
+                            <div>
+                                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Shortlisted</p>
+                                <p className="text-3xl font-black text-slate-900">
+                                    {loading ? '...' : jobs.reduce((sum, job) => sum + (job.shortlistedCount || 0), 0)}
                                 </p>
                             </div>
                         </div>
@@ -223,6 +239,8 @@ const CreateJobModal = ({ onClose, onSuccess }) => {
         minExperience: '',
         maxNoticePeriod: '',
         maxExpectedCtc: '',
+        requiredSkills: '',
+        preferredLocation: '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -237,6 +255,10 @@ const CreateJobModal = ({ onClose, onSuccess }) => {
                 minExperience: formData.minExperience ? parseFloat(formData.minExperience) : undefined,
                 maxNoticePeriod: formData.maxNoticePeriod ? parseInt(formData.maxNoticePeriod) : undefined,
                 maxExpectedCtc: formData.maxExpectedCtc ? parseFloat(formData.maxExpectedCtc) : undefined,
+                requiredSkills: formData.requiredSkills
+                    ? formData.requiredSkills.split(',').map(s => s.trim()).filter(Boolean)
+                    : undefined,
+                preferredLocation: formData.preferredLocation || undefined,
             };
 
             await jobAPI.create({
@@ -329,6 +351,32 @@ const CreateJobModal = ({ onClose, onSuccess }) => {
                                 onChange={(e) => setFormData({ ...formData, maxExpectedCtc: e.target.value })}
                             />
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Required Skills <span className="text-gray-400 font-normal">(comma separated)</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="input-field"
+                            placeholder="React, Node.js, PostgreSQL..."
+                            value={formData.requiredSkills}
+                            onChange={(e) => setFormData({ ...formData, requiredSkills: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Preferred Location
+                        </label>
+                        <input
+                            type="text"
+                            className="input-field"
+                            placeholder="e.g. Bangalore"
+                            value={formData.preferredLocation}
+                            onChange={(e) => setFormData({ ...formData, preferredLocation: e.target.value })}
+                        />
                     </div>
 
                     <div className="flex gap-3 pt-4">

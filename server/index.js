@@ -1,8 +1,17 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
-require('./db/connection'); // Initialize MongoDB connection
+
+// ─── Startup Validation ────────────────────────────────────────────────────────
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
+    console.error('❌ FATAL: JWT_SECRET must be set and at least 16 characters long.');
+    process.exit(1);
+}
+
+require('./db/connection');
 
 const authRoutes = require('./routes/auth');
 const jobRoutes = require('./routes/jobs');
@@ -11,43 +20,67 @@ const uploadRoutes = require('./routes/upload');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const isDev = process.env.NODE_ENV !== 'production';
 
-// Middleware
-app.use(cors());
+// ─── CORS ──────────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:5173',
+    'http://localhost:3000',
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error(`CORS: origin ${origin} not allowed`));
+        }
+    },
+    credentials: true,
+}));
+
+// ─── Logging ───────────────────────────────────────────────────────────────────
+app.use(morgan(isDev ? 'dev' : 'combined'));
+
+// ─── Body Parsing ──────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use((req, res, next) => {
-    console.log(`[GLOBAL] ${req.method} ${req.url}`);
-    next();
+// ─── Global Rate Limiters ──────────────────────────────────────────────────────
+// Auth: 10 requests per 15 minutes per IP (covers login + register)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { success: false, message: 'Too many requests. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
-// Serve uploaded files statically
+// ─── Static Files ──────────────────────────────────────────────────────────────
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
-app.use('/api/auth', authRoutes);
+// ─── Routes ───────────────────────────────────────────────────────────────────
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// Health check
+// ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Server is running', database: 'MongoDB' });
+    res.json({ success: true, message: 'Server is running', database: 'MongoDB', env: process.env.NODE_ENV });
 });
 
-// Error handling middleware
+// ─── Global Error Handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    res.status(err.status || 500).json({
-        error: err.message || 'Internal server error'
-    });
+    const status = err.status || 500;
+    const message = isDev ? err.message : 'Internal server error';
+    res.status(status).json({ success: false, message });
 });
 
-// Start server
+// ─── Start ────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on http://localhost:${PORT} [${process.env.NODE_ENV || 'development'}]`);
 });
 
 module.exports = app;
-

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { jobAPI, applicationAPI, uploadAPI } from '../services/api';
 import { MessageCircle, Upload, CheckCircle, Loader, Send, ChevronLeft } from 'lucide-react';
 import { chatbotFlow } from '../config/chatbotConfig';
+import owlMascot from '../assets/owl-mascot.png';
 
 const ChatbotApplication = () => {
     const { jobId } = useParams();
@@ -11,6 +12,8 @@ const ChatbotApplication = () => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [referenceId, setReferenceId] = useState('');
+    const [aiFeedback, setAiFeedback] = useState(null);
 
     // Chat history for the interface
     const [messages, setMessages] = useState([]);
@@ -45,7 +48,7 @@ const ChatbotApplication = () => {
     const fetchJob = async () => {
         try {
             const response = await jobAPI.getById(jobId);
-            setJob(response.data.job);
+            setJob(response.data.data?.job || response.data.job);
         } catch (error) {
             console.error('Failed to fetch job:', error);
         } finally {
@@ -142,7 +145,7 @@ const ChatbotApplication = () => {
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
-            await applicationAPI.submit({
+            const response = await applicationAPI.submit({
                 jobId,
                 ...formData,
                 totalExperience: parseFloat(formData.totalExperience),
@@ -152,6 +155,23 @@ const ChatbotApplication = () => {
                 noticePeriod: parseInt(formData.noticePeriod),
                 skills: (formData.skills || '').split(',').map(s => s.trim()).filter(s => s !== '')
             });
+
+            // Handle both normalized and direct response formats
+            const responseData = response.data.data || response.data;
+
+            // Capture AI feedback to show on success screen
+            if (responseData.matchScore !== undefined) {
+                setAiFeedback({
+                    score: responseData.matchScore,
+                    summary: responseData.aiSummary || `You matched ${responseData.matchScore}% for this role!`,
+                    status: responseData.autoStatus
+                });
+            }
+            if (responseData.application?._id) {
+                setReferenceId(responseData.application._id);
+            } else if (responseData._id) {
+                setReferenceId(responseData._id);
+            }
             setSubmitted(true);
         } catch (error) {
             console.error('Chatbot submission error:', error);
@@ -216,6 +236,11 @@ const ChatbotApplication = () => {
                         </div>
                     )}
 
+                    <div className="bg-slate-100 rounded-lg py-2 px-4 inline-block mb-8">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Reference Number</p>
+                        <p className="text-xs font-mono font-bold text-slate-600">#{referenceId.slice(-8).toUpperCase()}</p>
+                    </div>
+
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
                         We'll be in touch soon via email.
                     </p>
@@ -262,14 +287,14 @@ const ChatbotApplication = () => {
                 {messages.map((msg, idx) => (
                     <div
                         key={idx}
-                        className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}
                     >
                         <div
-                            className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.type === 'user'
+                            className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${msg.type === 'user'
                                 ? 'bg-primary-600 text-white rounded-br-none'
                                 : msg.type === 'error'
                                     ? 'bg-red-50 text-red-600 border border-red-100'
-                                    : 'bg-white text-gray-800 shadow-sm rounded-bl-none'
+                                    : 'bg-white text-gray-800 rounded-bl-none border border-slate-100'
                                 }`}
                         >
                             {msg.text}

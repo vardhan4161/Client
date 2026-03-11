@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { applicationAPI } from '../services/api';
-import { ArrowLeft, Download, Filter, Search, Loader } from 'lucide-react';
+import { ArrowLeft, Download, Filter, Search, Loader, Star, CheckCircle2, AlertCircle } from 'lucide-react';
+
+// Use env var for API base so resume links work in production too
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
 
 const Candidates = () => {
     const { jobId } = useParams();
     const navigate = useNavigate();
     const [candidates, setCandidates] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState('');
     const [filter, setFilter] = useState('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     const [expandSummary, setExpandSummary] = useState(null);
@@ -18,10 +22,12 @@ const Candidates = () => {
 
     const fetchCandidates = async () => {
         try {
+            setFetchError('');
             const response = await applicationAPI.getCandidates(jobId);
-            setCandidates(response.data.candidates);
+            setCandidates(response.data.data?.candidates || response.data.candidates || []);
         } catch (error) {
             console.error('Failed to fetch candidates:', error);
+            setFetchError('Failed to load candidates. Please refresh.');
         } finally {
             setLoading(false);
         }
@@ -151,7 +157,7 @@ const Candidates = () => {
                                     </div>
                                     {candidate.resume_url && (
                                         <a
-                                            href={`http://localhost:5000${candidate.resume_url}`}
+                                            href={`${API_BASE}${candidate.resume_url}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="btn-secondary flex items-center gap-2 whitespace-nowrap"
@@ -229,7 +235,7 @@ const Candidates = () => {
                                                 {candidate.ai_summary}
                                             </p>
 
-                                            {(expandSummary === candidate.application_id || true) && candidate.gemini_data && (
+                                            {expandSummary === candidate.application_id && candidate.gemini_data && (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-black/5">
                                                     <div>
                                                         <h4 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -245,14 +251,23 @@ const Candidates = () => {
                                                         </ul>
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                                            <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-                                                            Areas of Concern
+                                                        <h4 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center gap-1.5 text-amber-700">
+                                                            <AlertCircle className="w-3.5 h-3.5 mr-1" />
+                                                            Gap Analysis
                                                         </h4>
                                                         <ul className="space-y-1">
+                                                            {(candidate.gemini_data.missingSkills || []).length > 0 ? (
+                                                                candidate.gemini_data.missingSkills.map((s, i) => (
+                                                                    <li key={i} className="text-xs font-medium flex gap-2">
+                                                                        <span className="text-amber-500">•</span> Gap: {s}
+                                                                    </li>
+                                                                ))
+                                                            ) : (
+                                                                <li className="text-xs font-medium text-emerald-600">✓ No critical skill gaps identified</li>
+                                                            )}
                                                             {(candidate.gemini_data.concerns || []).map((c, i) => (
-                                                                <li key={i} className="text-xs font-medium flex gap-2">
-                                                                    <span className="text-amber-500">•</span> {c}
+                                                                <li key={`c-${i}`} className="text-xs font-medium flex gap-2 text-red-600/70">
+                                                                    <span className="text-red-400">!!</span> {c}
                                                                 </li>
                                                             ))}
                                                         </ul>

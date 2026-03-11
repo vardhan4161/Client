@@ -1,68 +1,53 @@
 const { Job, Application } = require('../models');
 
-// Create a new job
+// POST /api/jobs
 const createJob = async (req, res) => {
     try {
         const { title, description, requirements } = req.body;
         const recruiterId = req.user.userId;
 
-        const job = await Job.create({
-            recruiter_id: recruiterId,
-            title,
-            description,
-            requirements: requirements || {}
-        });
-
-        res.status(201).json({
-            message: 'Job created successfully',
-            job
-        });
+        const job = await Job.create({ recruiter_id: recruiterId, title, description, requirements: requirements || {} });
+        res.status(201).json({ success: true, message: 'Job created successfully', data: { job } });
     } catch (error) {
         console.error('Create job error:', error);
-        res.status(500).json({ error: 'Failed to create job' });
+        res.status(500).json({ success: false, message: 'Failed to create job' });
     }
 };
 
-// Get all jobs for the logged-in recruiter
+// GET /api/jobs
 const getJobs = async (req, res) => {
     try {
         const recruiterId = req.user.userId;
         const jobs = await Job.find({ recruiter_id: recruiterId }).sort({ created_at: -1 });
 
-        // Get applicant counts for each job
         const jobsWithCounts = await Promise.all(jobs.map(async (job) => {
-            const applicantCount = await Application.countDocuments({ job_id: job._id });
-            return {
-                ...job.toObject(),
-                applicantCount
-            };
+            const [applicantCount, shortlistedCount] = await Promise.all([
+                Application.countDocuments({ job_id: job._id }),
+                Application.countDocuments({ job_id: job._id, status: 'SHORTLISTED' }),
+            ]);
+            return { ...job.toObject(), applicantCount, shortlistedCount };
         }));
 
-        res.json({ jobs: jobsWithCounts });
+        res.json({ success: true, data: { jobs: jobsWithCounts } });
     } catch (error) {
         console.error('Get jobs error:', error);
-        res.status(500).json({ error: 'Failed to fetch jobs' });
+        res.status(500).json({ success: false, message: 'Failed to fetch jobs' });
     }
 };
 
-// Get a single job by ID (public - for candidates)
+// GET /api/jobs/:id  (public — for candidates)
 const getJobById = async (req, res) => {
     try {
-        const { id } = req.params;
-        const job = await Job.findOne({ _id: id, status: 'OPEN' });
-
-        if (!job) {
-            return res.status(404).json({ error: 'Job not found or closed' });
-        }
-
-        res.json({ job });
+        const job = await Job.findOne({ _id: req.params.id, status: 'OPEN' });
+        if (!job) return res.status(404).json({ success: false, message: 'Job not found or closed' });
+        res.json({ success: true, data: { job } });
     } catch (error) {
         console.error('Get job error:', error);
-        res.status(500).json({ error: 'Failed to fetch job' });
+        res.status(500).json({ success: false, message: 'Failed to fetch job' });
     }
 };
 
-// Update job status
+// PUT /api/jobs/:id/status
 const updateJobStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -75,17 +60,11 @@ const updateJobStatus = async (req, res) => {
             { new: true }
         );
 
-        if (!job) {
-            return res.status(404).json({ error: 'Job not found' });
-        }
-
-        res.json({
-            message: 'Job status updated',
-            job
-        });
+        if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+        res.json({ success: true, message: 'Job status updated', data: { job } });
     } catch (error) {
         console.error('Update job status error:', error);
-        res.status(500).json({ error: 'Failed to update job status' });
+        res.status(500).json({ success: false, message: 'Failed to update job status' });
     }
 };
 

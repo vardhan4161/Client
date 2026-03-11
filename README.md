@@ -1,42 +1,46 @@
-# TalentSetu.ai 🚀
-**The Bridge to Exceptional Talent**
+# TalentSetu.ai 🦉
+**The Intelligent Bridge to Talent**
 
-TalentSetu.ai is a modern web-based recruitment platform that automates candidate screening through an intelligent chatbot interface.
+TalentSetu.ai is a modern AI-powered recruitment platform that automates candidate screening through an intelligent chatbot interface and Gemini AI-driven candidate analysis.
 
 ## 🎯 Features
 
-- **Automated Chatbot Screening**: Job-specific chatbot that collects candidate information
-- **Smart AI Matching**: Intelligent scoring and gap analysis
-- **TalentSetu.ai Dashboard**: Manage jobs and review candidates
-- **Candidate Database**: Searchable profiles with filtering
-- **Resume Insight**: Automated skill extraction and verification
+- **Automated Chatbot Screening** — Job-specific chatbot collects candidate information step-by-step
+- **Gemini AI Matching** — Deep resume analysis with match scores, strengths, and gap analysis
+- **Recruiter Dashboard** — Manage jobs, review candidates, update application statuses
+- **Candidate Database** — Searchable profiles with filters by status/skills
+- **Resume Insight** — Automated skill extraction and verification via AI
 
 ## 🛠 Tech Stack
 
 ### Frontend
-- React.js with Vite
+- React 19 + Vite
 - Tailwind CSS
-- React Router
+- React Router v7
 - Axios
 - Lucide React (Icons)
 
 ### Backend
-- Node.js
-- Express.js
-- PostgreSQL
-- JWT Authentication
+- Node.js + Express
+- **MongoDB** (Mongoose ODM) — with in-memory fallback for development
+- JWT Authentication (bcryptjs + jsonwebtoken)
 - Multer (File Upload)
+- Google Gemini AI (`@google/generative-ai`)
+- Joi (input validation)
 
 ## 📋 Prerequisites
 
-- Node.js (v16 or higher)
+- Node.js v18+
 - npm or yarn
+- A MongoDB instance (local, Atlas, or leave blank to use the built-in in-memory fallback)
+- A Google Gemini API key (get one free at [makersuite.google.com](https://makersuite.google.com))
 
 ## 🚀 Installation & Setup
 
 ### 1. Clone the Repository
 ```bash
 git clone https://github.com/vardhan4161/Client
+cd Client
 ```
 
 ### 2. Backend Setup
@@ -46,26 +50,34 @@ cd server
 npm install
 ```
 
-Create `.env` file in `server/` directory:
+Create a `.env` file in the `server/` directory (copy from `.env.example`):
 ```env
 PORT=5000
-MONGODB_URI=your_mongodb_uri_here
-JWT_SECRET=your_secret_key_here
+MONGODB_URI=your_mongodb_atlas_uri_here
+JWT_SECRET=your_long_random_secret_here
 NODE_ENV=development
 UPLOAD_DIR=./uploads
+GEMINI_API_KEY=your_gemini_api_key_here
+FRONTEND_URL=http://localhost:5173
 ```
-*(Leave MONGODB_URI blank to use the built-in in-memory database fallback)*
 
-Start the backend server:
+> **Tip**: Leave `MONGODB_URI` pointing to a local or Atlas instance. If the connection fails, the server automatically falls back to an in-memory MongoDB database (data is lost on restart).
+
+Start the backend:
 ```bash
 npm run dev
 ```
 
-### 4. Frontend Setup
+### 3. Frontend Setup
 
 ```bash
 cd client
 npm install
+```
+
+Create a `.env` file in `client/` (copy from `.env.example`):
+```env
+VITE_API_URL=http://localhost:5000/api
 ```
 
 Start the frontend:
@@ -73,137 +85,98 @@ Start the frontend:
 npm run dev
 ```
 
+Open `http://localhost:5173` in your browser.
+
 ## 🎮 Usage
 
 ### For Recruiters
 
-1. **Register/Login**: Create an account at `http://localhost:5173/register`
-2. **Create Job**: Click "Create Job" on the dashboard
-3. **Share Link**: Copy the application link and share on LinkedIn
-4. **Review Candidates**: View applicants and their match scores
-5. **Manage Applications**: Shortlist, hold, reject, or hire candidates
+1. **Register / Login** — Create an account at `/register`
+2. **Create a Job** — Click "New Posting" on the dashboard; add title, description, required skills, notice period, CTC range, and preferred location
+3. **Share the Link** — Copy the application link (e.g. `/apply/<jobId>`) and share on LinkedIn / WhatsApp
+4. **Review Candidates** — Click "View Candidates" to see applicants ranked by AI match score
+5. **Manage Applications** — Shortlist, hold, reject, or hire candidates with one click
 
 ### For Candidates
 
-1. **Open Link**: Click the job application link shared by recruiter
-2. **Complete Chatbot**: Answer questions step-by-step
-3. **Upload Resume**: Upload your resume (PDF/DOC)
-4. **Submit**: Receive confirmation
+1. **Open Link** — Click the job application link shared by the recruiter
+2. **Complete Chatbot** — Answer questions step-by-step (name, experience, CTC, location, skills)
+3. **Upload Resume** — Upload your resume (PDF/DOC/DOCX, max 5 MB)
+4. **Submit** — Receive a confirmation with your AI match score
 
 ## 📁 Project Structure
 
 ```
-d:/Hire/
+HRM/
 ├── server/
-│   ├── controllers/      # Business logic
-│   ├── routes/          # API routes
-│   ├── middleware/      # Auth & validation
-│   ├── db/             # Database config & schema
-│   └── index.js        # Entry point
+│   ├── controllers/      # Business logic (auth, jobs, applications, upload)
+│   ├── routes/           # Express route definitions
+│   ├── middleware/        # JWT auth & Joi validation
+│   ├── models/           # Mongoose schemas (User, Job, Candidate, Application)
+│   ├── services/         # Gemini AI service
+│   ├── utils/            # Resume parser (PDF + DOCX)
+│   ├── db/               # MongoDB connection (with in-memory fallback)
+│   └── index.js          # Entry point
 ├── client/
 │   ├── src/
-│   │   ├── pages/      # React pages
-│   │   ├── context/    # State management
-│   │   ├── services/   # API calls
-│   │   └── App.jsx     # Main component
+│   │   ├── pages/        # Login, Register, Dashboard, Candidates, ChatbotApplication
+│   │   ├── context/      # AuthContext (JWT storage)
+│   │   ├── services/     # Axios API client
+│   │   ├── config/       # Chatbot step definitions
+│   │   └── App.jsx       # Router + protected routes
 │   └── public/
-└── docs/               # Documentation
+├── render.yaml           # Render deployment config
+└── docs/
 ```
 
 ## 🔒 Security Features
 
-- JWT-based authentication
-- Password hashing with bcrypt
-- File type validation
-- File size limits (5MB)
-- SQL injection protection
-- CORS enabled
-
-## 🧪 Testing
-
-Run backend tests:
-```bash
-cd server
-npm test
-```
+- JWT-based authentication with `Bearer` token scheme
+- Password hashing with bcrypt (10 rounds)
+- Joi input validation on all routes
+- File type validation (PDF/DOC/DOCX only, 5 MB max)
+- Upload endpoint rate-limited (10 requests per 15 min per IP)
+- CORS restricted to the configured `FRONTEND_URL`
 
 ## 📊 API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - Register recruiter
-- `POST /api/auth/login` - Login
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/register` | - | Register recruiter |
+| POST | `/api/auth/login` | - | Login |
 
 ### Jobs
-- `POST /api/jobs` - Create job (Protected)
-- `GET /api/jobs` - Get all jobs (Protected)
-- `GET /api/jobs/:id` - Get job details (Public)
-- `PUT /api/jobs/:id/status` - Update job status (Protected)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/jobs` | ✅ | Create job |
+| GET | `/api/jobs` | ✅ | Get recruiter's jobs |
+| GET | `/api/jobs/:id` | - | Get job details (public) |
+| PUT | `/api/jobs/:id/status` | ✅ | Update job status |
 
 ### Applications
-- `POST /api/applications/submit` - Submit application (Public)
-- `GET /api/applications/candidates?jobId=:id` - Get candidates (Protected)
-- `PATCH /api/applications/:id/status` - Update status (Protected)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/applications/submit` | - | Submit application (public) |
+| GET | `/api/applications/candidates?jobId=:id` | ✅ | Get candidates for a job |
+| PATCH | `/api/applications/:id/status` | ✅ | Update candidate status |
 
 ### Upload
-- `POST /api/upload` - Upload resume (Public)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/upload` | Rate-limited | Upload resume (PDF/DOC/DOCX) |
 
-## 🎨 UI/UX Highlights
+## 🚢 Deployment on Render
 
-- Gradient backgrounds with modern color palette
-- Smooth animations and transitions
-- Mobile-responsive design
-- Progress indicators in chatbot
-- Real-time validation
-- Clean, professional ATS-style interface
-
-## 🚢 Deployment
-
-### Docker (Recommended)
-
-Create `docker-compose.yml`:
-```yaml
-version: '3.8'
-services:
-  db:
-    image: postgres:14
-    environment:
-      POSTGRES_DB: hire_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    volumes:
-      - ./server/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-  
-  backend:
-    build: ./server
-    ports:
-      - "5000:5000"
-    environment:
-      DATABASE_URL: postgresql://postgres:password@db:5432/hire_db
-    depends_on:
-      - db
-  
-  frontend:
-    build: ./client
-    ports:
-      - "80:80"
-```
-
-Run:
-```bash
-docker-compose up -d
-```
-
-### Manual Deployment
-
-1. Build frontend: `cd client && npm run build`
-2. Serve static files from `client/dist`
-3. Deploy backend to cloud (Heroku, AWS, etc.)
-4. Set environment variables
-5. Run database migrations
+1. Push to GitHub
+2. Create a new **Blueprint** in Render and link your repo — the `render.yaml` is pre-configured
+3. Set the following secret env vars in the Render dashboard:
+   - `MONGODB_URI` — your MongoDB Atlas connection string
+   - `GEMINI_API_KEY` — your Google Gemini API key
+4. Render will auto-deploy both the API and the static frontend
 
 ## 🤝 Contributing
 
-This is an autonomous AI-built project. For improvements:
 1. Fork the repository
 2. Create a feature branch
 3. Make changes
@@ -213,10 +186,6 @@ This is an autonomous AI-built project. For improvements:
 
 MIT License
 
-## 🆘 Support
-
-For issues or questions, please create an issue in the repository.
-
 ---
 
-**Built autonomously by AI Product Team** 🤖
+**Built with ❤️ and 🤖 AI**

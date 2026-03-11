@@ -20,7 +20,8 @@ const Register = () => {
 
         try {
             const response = await authAPI.register(formData);
-            login(response.data.user, response.data.token);
+            const { user, token } = response.data.data;
+            login(user, token);
             navigate('/dashboard');
         } catch (err) {
             setError(err.response?.data?.error || 'Registration failed');
