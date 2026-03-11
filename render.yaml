@@ -22,8 +22,9 @@ services:
         value: https://replace-with-your-client-url.onrender.com
 
   # FRONTEND
-  - type: static_site
+  - type: web
     name: hire-client
+    env: static
     root: client
     buildCommand: npm install && npm run build
     staticPublishPath: dist
