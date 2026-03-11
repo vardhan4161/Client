@@ -1,7 +1,5 @@
 services:
-  # -----------------------------
-  # BACKEND SERVICE (Node.js API)
-  # -----------------------------
+  # BACKEND
   - type: web
     name: hire-api
     env: node
@@ -21,14 +19,9 @@ services:
       - key: UPLOAD_DIR
         value: ./uploads
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: hire-client
-          property: url
+        value: https://replace-with-your-client-url.onrender.com
 
-  # -----------------------------
-  # FRONTEND SERVICE (React App)
-  # -----------------------------
+  # FRONTEND
   - type: web
     name: hire-client
     env: static
@@ -42,7 +35,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: hire-api
-          property: hostWithScheme
+        value: https://replace-with-your-api-url.onrender.com/api
