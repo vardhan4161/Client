@@ -34,8 +34,8 @@ async function seed() {
     await new Promise((resolve) => {
         if (mongoose.connection.readyState === 1) return resolve();
         mongoose.connection.once('open', resolve);
-        // Timeout after 10s
-        setTimeout(() => { console.error('DB connection timed out'); process.exit(1); }, 10000);
+        // Timeout after 2 minutes (allow time for MongoMemoryServer binary download on free instances)
+        setTimeout(() => { console.error('DB connection timed out (2m)'); process.exit(1); }, 120000);
     });
 
     console.log('\n🌱 Seeding demo accounts...\n');
