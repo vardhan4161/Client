@@ -11,7 +11,7 @@ const submitApplicationSchema = Joi.object({
     jobId: Joi.string().required(),
     name: Joi.string().min(2).required(),
     email: Joi.string().email().required(),
-    phone: Joi.string().min(10).required(),
+    phone: Joi.string().min(7).required(),
     totalExperience: Joi.number().min(0).required(),
     relevantExperience: Joi.number().min(0).required(),
     currentCtc: Joi.number().min(0).required(),
@@ -19,7 +19,7 @@ const submitApplicationSchema = Joi.object({
     currentLocation: Joi.string().min(2).required(),
     noticePeriod: Joi.number().min(0).required(),
     skills: Joi.array().items(Joi.string()).required(),
-    resumeUrl: Joi.string().required()
+    resumeUrl: Joi.string().optional().allow('')
 });
 
 const updateStatusSchema = Joi.object({

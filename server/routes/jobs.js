@@ -14,7 +14,8 @@ const createJobSchema = Joi.object({
         minExperience: Joi.number().min(0).optional(),
         maxNoticePeriod: Joi.number().min(0).optional(),
         maxExpectedCtc: Joi.number().min(0).optional(),
-        requiredSkills: Joi.array().items(Joi.string()).optional()
+        requiredSkills: Joi.array().items(Joi.string()).optional(),
+        preferredLocation: Joi.string().optional().allow('')
     }).optional()
 });
 

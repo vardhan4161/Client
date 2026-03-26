@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { applicationAPI } from '../services/api';
-import { ArrowLeft, Download, Filter, Search, Loader, Star, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Download, Filter, Search, Loader, Star, CheckCircle2, AlertCircle, Eye, X, FileText } from 'lucide-react';
 
 // Use env var for API base so resume links work in production too
 const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api')).replace('/api', '');
@@ -15,6 +15,7 @@ const Candidates = () => {
     const [filter, setFilter] = useState('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     const [expandSummary, setExpandSummary] = useState(null);
+    const [viewingPdf, setViewingPdf] = useState(null); // { url, name }
 
     useEffect(() => {
         fetchCandidates();
@@ -156,15 +157,22 @@ const Candidates = () => {
                                         </div>
                                     </div>
                                     {candidate.resume_url && (
-                                        <a
-                                            href={`${API_BASE}${candidate.resume_url}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="btn-secondary flex items-center gap-2 whitespace-nowrap"
-                                        >
-                                            <Download className="w-4 h-4" />
-                                            View Resume
-                                        </a>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setViewingPdf({ url: `${API_BASE}${candidate.resume_url}`, name: candidate.name })}
+                                                className="btn-secondary flex items-center gap-2 whitespace-nowrap"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                                View PDF
+                                            </button>
+                                            <a
+                                                href={`${API_BASE}${candidate.resume_url}`}
+                                                download
+                                                className="btn-secondary flex items-center gap-2 whitespace-nowrap"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </a>
+                                        </div>
                                     )}
                                 </div>
 
@@ -313,6 +321,44 @@ const Candidates = () => {
                     </div>
                 )}
             </main>
+
+            {/* PDF Viewer Modal */}
+            {viewingPdf && (
+                <div
+                    className="fixed inset-0 z-50 flex flex-col bg-black/80 animate-fade-in"
+                    onClick={(e) => e.target === e.currentTarget && setViewingPdf(null)}
+                >
+                    {/* Modal Header */}
+                    <div className="flex items-center justify-between bg-slate-900 px-6 py-3 border-b border-slate-700">
+                        <div className="flex items-center gap-3">
+                            <FileText className="w-5 h-5 text-primary-400" />
+                            <span className="text-white font-semibold text-sm">{viewingPdf.name}'s Resume</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <a
+                                href={viewingPdf.url}
+                                download
+                                className="flex items-center gap-2 text-slate-300 hover:text-white text-sm font-medium transition-colors"
+                            >
+                                <Download className="w-4 h-4" />
+                                Download
+                            </a>
+                            <button
+                                onClick={() => setViewingPdf(null)}
+                                className="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                    {/* PDF iframe */}
+                    <iframe
+                        src={`${viewingPdf.url}#toolbar=1&view=FitH`}
+                        className="flex-1 w-full bg-white"
+                        title={`${viewingPdf.name}'s Resume`}
+                    />
+                </div>
+            )}
         </div>
     );
 };

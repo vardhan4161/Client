@@ -50,7 +50,12 @@ const authLimiter = rateLimit({
 // ─── Static Files ──────────────────────────────────────────────────────────────
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
+// ─── Health Check (must be BEFORE the SPA catch-all) ─────────────────────────
+app.get('/health', (req, res) => {
+    res.json({ success: true, message: 'Server is running', database: 'MongoDB', env: process.env.NODE_ENV });
+});
+
+// ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
@@ -62,11 +67,6 @@ app.use(express.static(clientDistPath));
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(clientDistPath, 'index.html'));
-});
-
-// ─── Health Check ─────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
-    res.json({ success: true, message: 'Server is running', database: 'MongoDB', env: process.env.NODE_ENV });
 });
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────

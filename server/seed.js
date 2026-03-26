@@ -12,21 +12,8 @@ const { User } = require('./models');
 const mongoose = require('mongoose');
 
 const DEMO_ACCOUNTS = [
-    {
-        name: 'Sravan',
-        email: 'sravan@talentsetu.ai',
-        password: 'Demo@1234',
-    },
-    {
-        name: 'Vardhan',
-        email: 'vardhan@talentsetu.ai',
-        password: 'Demo@5678',
-    },
-    {
-        name: 'Example',
-        email: 'example@talentsetu.ai',
-        password: 'Demo@9012',
-    },
+    { name: 'Sravan',  email: 'sravan@talentsetu.ai',  password: 'Demo@1234' },
+    { name: 'Vardhan', email: 'vardhan@talentsetu.ai', password: 'Demo@5678' },
 ];
 
 async function seed() {

@@ -175,7 +175,17 @@ const ChatbotApplication = () => {
             setSubmitted(true);
         } catch (error) {
             console.error('Chatbot submission error:', error);
-            setMessages(prev => [...prev, { type: 'error', text: 'Submission failed. Please try again.' }]);
+            const status = error?.response?.status;
+            const msg = error?.response?.data?.message || error?.message || 'Unknown error';
+            let displayMsg = 'Submission failed. Please try again.';
+            if (status === 404) {
+                displayMsg = '❌ This job link has expired. Please get a fresh application link from the recruiter.';
+            } else if (status === 400) {
+                displayMsg = `❌ Validation error: ${msg}`;
+            } else if (!navigator.onLine) {
+                displayMsg = '❌ No internet connection. Please check your network.';
+            }
+            setMessages(prev => [...prev, { type: 'error', text: displayMsg }]);
         } finally {
             setSubmitting(false);
         }

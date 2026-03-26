@@ -30,12 +30,12 @@ export const chatbotFlow = [
     {
         id: 'phone',
         question: "And your phone number for us to contact you?",
-        type: 'tel',
+        type: 'text',
         placeholder: '+91 9876543210',
         validation: {
             required: true,
-            pattern: /^\+?[\d\s-]{10,}$/,
-            message: 'Please enter a valid phone number'
+            pattern: /^[\+\d][\d\s\-\.\(\)]{8,}$/,
+            message: 'Please enter a valid phone number (min 10 digits)'
         }
     },
     {
