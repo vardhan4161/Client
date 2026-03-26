@@ -39,9 +39,29 @@ const Dashboard = () => {
 
     const copyApplicationLink = (jobId) => {
         const link = `${window.location.origin}/apply/${jobId}`;
-        navigator.clipboard.writeText(link);
-        setCopiedId(jobId);
-        setTimeout(() => setCopiedId(null), 2000);
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(link).then(() => {
+                setCopiedId(jobId);
+                setTimeout(() => setCopiedId(null), 2000);
+            });
+        } else {
+            // Fallback for HTTP (no HTTPS)
+            const ta = document.createElement('textarea');
+            ta.value = link;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try {
+                document.execCommand('copy');
+                setCopiedId(jobId);
+                setTimeout(() => setCopiedId(null), 2000);
+            } catch {
+                window.prompt('Copy this link:', link);
+            }
+            document.body.removeChild(ta);
+        }
     };
 
     return (
