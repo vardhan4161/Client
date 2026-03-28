@@ -1,385 +1,483 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { jobAPI, applicationAPI, uploadAPI } from '../services/api';
-import { MessageCircle, Upload, CheckCircle, Loader, Send, ChevronLeft } from 'lucide-react';
-import { chatbotFlow } from '../config/chatbotConfig';
+import { CheckCircle, Loader, Send, Paperclip } from 'lucide-react';
+import { chatbotFlow, noticeBranch } from '../config/chatbotConfig';
 import owlMascot from '../assets/owl-mascot.png';
 
+/* ─────────────────────────────────────────────
+   Typing bubble — three animated dots
+───────────────────────────────────────────── */
+const TypingBubble = () => (
+    <div className="flex items-end gap-2 mb-1">
+        <img src={owlMascot} alt="bot" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-1 drop-shadow" />
+        <div className="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-bl-none px-4 py-3 flex gap-1 items-center">
+            {[0, 1, 2].map(i => (
+                <span
+                    key={i}
+                    className="w-2 h-2 rounded-full bg-slate-400 inline-block"
+                    style={{ animation: `chatDot 1.2s ${i * 0.2}s ease-in-out infinite` }}
+                />
+            ))}
+        </div>
+    </div>
+);
+
+/* ─────────────────────────────────────────────
+   Single chat message row
+───────────────────────────────────────────── */
+const ChatMessage = ({ msg, showAvatar }) => {
+    if (msg.type === 'bot') return (
+        <div className="flex items-end gap-2 mb-1 animate-slideUp">
+            {showAvatar
+                ? <img src={owlMascot} alt="bot" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-1 drop-shadow" />
+                : <div className="w-7 flex-shrink-0" />}
+            <div className="max-w-[78%] bg-white border border-slate-100 shadow-sm rounded-2xl rounded-bl-none px-4 py-2.5 text-slate-800 text-sm leading-relaxed">
+                {msg.text}
+            </div>
+        </div>
+    );
+
+    if (msg.type === 'error') return (
+        <div className="flex justify-center mb-1 animate-slideUp">
+            <div className="max-w-[78%] bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-2 text-xs text-center">
+                ⚠️ {msg.text}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="flex justify-end mb-1 animate-slideUp">
+            <div className="max-w-[78%] bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-2xl rounded-br-none px-4 py-2.5 text-sm leading-relaxed shadow-sm">
+                {msg.text}
+            </div>
+        </div>
+    );
+};
+
+/* ═══════════════════════════════════════════
+   Main component
+═══════════════════════════════════════════ */
 const ChatbotApplication = () => {
     const { jobId } = useParams();
     const [job, setJob] = useState(null);
-    const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [referenceId, setReferenceId] = useState('');
     const [aiFeedback, setAiFeedback] = useState(null);
 
-    // Chat history for the interface
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState('');
     const [uploadingResume, setUploadingResume] = useState(false);
+    const [isTyping, setIsTyping] = useState(false);
+
+    // Dynamic steps list (base flow + injected branch step)
+    const [steps, setSteps] = useState([...chatbotFlow]);
+    const [stepIndex, setStepIndex] = useState(0);
+    const [formData, setFormData] = useState({ resumeUrl: '' });
+
     const messagesEndRef = useRef(null);
-
-    const [formData, setFormData] = useState({
-        resumeUrl: ''
-    });
-
-    useEffect(() => {
-        fetchJob();
-    }, [jobId]);
-
-    // Auto-scroll to bottom of chat
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    // Initialize chat flow
+    const inputRef = useRef(null);
     const hasInitialized = useRef(false);
 
+    // ── Fetch job
+    useEffect(() => { fetchJob(); }, [jobId]);
+
+    // ── Auto-scroll
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isTyping]);
+
+    // ── Start flow once job loaded
     useEffect(() => {
         if (job && !hasInitialized.current) {
             hasInitialized.current = true;
-            // Small delay to ensure render stability
-            setTimeout(() => processStep(0), 100);
+            setTimeout(() => askStep([...chatbotFlow], 0), 300);
         }
     }, [job]);
+
+    // ── Re-focus input after bot finishes typing
+    useEffect(() => {
+        if (!isTyping) inputRef.current?.focus();
+    }, [isTyping]);
 
     const fetchJob = async () => {
         try {
             const response = await jobAPI.getById(jobId);
             setJob(response.data.data?.job || response.data.job);
-        } catch (error) {
-            console.error('Failed to fetch job:', error);
+        } catch (err) {
+            console.error('Failed to fetch job:', err);
         } finally {
             setLoading(false);
         }
     };
 
-    const processStep = (index) => {
-        if (index >= chatbotFlow.length) {
+    /* Push a bot message with typing animation */
+    const pushBot = (text, delay = 650) => new Promise(resolve => {
+        setIsTyping(true);
+        setTimeout(() => {
+            setIsTyping(false);
+            setMessages(prev => [...prev, { type: 'bot', text }]);
+            resolve();
+        }, delay);
+    });
+
+    /* Ask the step at a given index from a given steps array */
+    const askStep = async (currentSteps, index) => {
+        if (index >= currentSteps.length) {
             handleSubmit();
             return;
         }
-
-        const step = chatbotFlow[index];
-
-        // Add bot message
-        if (step.type === 'message') {
-            setMessages(prev => [...prev, { type: 'bot', text: step.text }]);
-            setTimeout(() => {
-                processStep(index + 1);
-            }, step.delay || 1000);
-            setCurrentStepIndex(index + 1);
-            return;
-        }
-
-        // Add question
-        setMessages(prev => [...prev, {
-            type: 'bot',
-            text: step.question,
-            inputType: step.type,
-            stepId: step.id
-        }]);
-        setCurrentStepIndex(index);
+        const step = currentSteps[index];
+        setSteps(currentSteps);
+        setStepIndex(index);
+        await pushBot(step.question, index === 0 ? 800 : 600);
     };
 
+    /* Validate a value against step rules */
     const validateInput = (value, step) => {
         if (!step.validation) return { isValid: true };
-
-        const { required, minLength, pattern, min, max, custom, message } = step.validation;
-
+        const { required, minLength, pattern, min, max, message } = step.validation;
         if (required && !value) return { isValid: false, message: message || 'This field is required' };
-        if (minLength && value.length < minLength) return { isValid: false, message: message };
-        if (pattern && !pattern.test(value)) return { isValid: false, message: message };
-        if (min !== undefined && parseFloat(value) < min) return { isValid: false, message: message };
-        if (max !== undefined && parseFloat(value) > max) return { isValid: false, message: message };
-        if (custom && !custom(value, formData)) return { isValid: false, message: message };
-
+        if (minLength && value.length < minLength) return { isValid: false, message };
+        if (pattern && !pattern.test(value)) return { isValid: false, message };
+        if (min !== undefined && parseFloat(value) < min) return { isValid: false, message };
+        if (max !== undefined && parseFloat(value) > max) return { isValid: false, message };
         return { isValid: true };
     };
 
-    const handleUserInput = async (value, type = 'text') => {
-        const currentStep = chatbotFlow[currentStepIndex];
+    /* Handle text/number/email send */
+    const handleSend = () => {
+        const value = inputValue.trim();
+        if (!value || isTyping || submitting) return;
 
-        // Validate
+        const currentStep = steps[stepIndex];
+        if (!currentStep) return;
+
         const validation = validateInput(value, currentStep);
         if (!validation.isValid) {
             setMessages(prev => [...prev, { type: 'error', text: validation.message }]);
             return;
         }
 
-        // Add user message
-        if (type !== 'file') {
-            setMessages(prev => [...prev, { type: 'user', text: value }]);
-            setFormData(prev => ({ ...prev, [currentStep.id]: value }));
-        } else {
-            setMessages(prev => [...prev, { type: 'user', text: `Uploaded: ${value.name}` }]);
-        }
-
+        // User bubble
+        setMessages(prev => [...prev, { type: 'user', text: value }]);
+        const newFormData = { ...formData, [currentStep.id]: value };
+        setFormData(newFormData);
         setInputValue('');
 
-        // Move to next step
-        setTimeout(() => {
-            processStep(currentStepIndex + 1);
-        }, 500);
+        // ── Notice period branching ──
+        if (currentStep.isBranching) {
+            const isYes = /^(yes|y)$/i.test(value);
+            const branchStep = isYes ? noticeBranch.yes : noticeBranch.no;
+
+            // Find the index of noticePeriodCheck in steps and splice the branch step right after it
+            const newSteps = [...steps];
+            const branchInsertIndex = stepIndex + 1;
+            // Remove any previously injected branch step (lastWorkingDay or noticePeriod)
+            const filtered = newSteps.filter(s => s.id !== 'lastWorkingDay' && s.id !== 'noticePeriod');
+            // Find where noticePeriodCheck lands in the filtered list, then insert after it
+            const checkIdx = filtered.findIndex(s => s.id === 'noticePeriodCheck');
+            filtered.splice(checkIdx + 1, 0, branchStep);
+
+            setTimeout(() => askStep(filtered, branchInsertIndex), 400);
+            return;
+        }
+
+        setTimeout(() => askStep(steps, stepIndex + 1), 400);
     };
 
+    /* Handle resume file upload */
     const handleResumeUpload = async (e) => {
-        const file = e.target.files[0];
+        const file = e.target.files?.[0];
         if (!file) return;
 
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const allowed = ['pdf', 'doc', 'docx'];
+        const maxBytes = 1 * 1024 * 1024; // 1 MB strict
+
+        if (!allowed.includes(ext)) {
+            setMessages(prev => [...prev, { type: 'error', text: 'Only PDF, DOC, or DOCX files are accepted.' }]);
+            e.target.value = '';
+            return;
+        }
+        if (file.size > maxBytes) {
+            setMessages(prev => [...prev, { type: 'error', text: 'File exceeds 1 MB limit. Please compress and try again.' }]);
+            e.target.value = '';
+            return;
+        }
+
         setUploadingResume(true);
+        setIsTyping(true);
         try {
-            // Updated to use the correct upload API
             const response = await uploadAPI.uploadResume(file);
             setFormData(prev => ({ ...prev, resumeUrl: response.data.url }));
-            handleUserInput(file, 'file');
-        } catch (error) {
+            setMessages(prev => [...prev, { type: 'user', text: `📎 ${file.name}` }]);
+            setIsTyping(false);
+            setTimeout(() => handleSubmit(), 400);
+        } catch (err) {
+            setIsTyping(false);
             setMessages(prev => [...prev, { type: 'error', text: 'Upload failed. Please try again.' }]);
         } finally {
             setUploadingResume(false);
         }
     };
 
+    /* Final application submit */
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
             const response = await applicationAPI.submit({
                 jobId,
-                ...formData,
-                totalExperience: parseFloat(formData.totalExperience),
-                relevantExperience: parseFloat(formData.relevantExperience),
-                currentCtc: parseFloat(formData.currentCtc),
-                expectedCtc: parseFloat(formData.expectedCtc),
-                noticePeriod: parseInt(formData.noticePeriod),
-                skills: (formData.skills || '').split(',').map(s => s.trim()).filter(s => s !== '')
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                currentLocation: formData.currentLocation,
+                resumeUrl: formData.resumeUrl,
+                totalExperience: parseFloat(formData.totalExperience) || 0,
+                relevantExperience: parseFloat(formData.relevantExperience || formData.totalExperience) || 0,
+                currentCtc: parseFloat(formData.currentCtc) || 0,
+                expectedCtc: parseFloat(formData.expectedCtc) || 0,
+                noticePeriod: parseInt(formData.noticePeriod) || 0,
+                skills: Array.isArray(formData.skills)
+                    ? formData.skills
+                    : formData.skills
+                        ? String(formData.skills).split(',').map(s => s.trim()).filter(Boolean)
+                        : [],
             });
 
-            // Handle both normalized and direct response formats
-            const responseData = response.data.data || response.data;
-
-            // Capture AI feedback to show on success screen
-            if (responseData.matchScore !== undefined) {
+            const data = response.data.data || response.data;
+            if (data.matchScore !== undefined) {
                 setAiFeedback({
-                    score: responseData.matchScore,
-                    summary: responseData.aiSummary || `You matched ${responseData.matchScore}% for this role!`,
-                    status: responseData.autoStatus
+                    score: data.matchScore,
+                    summary: data.aiSummary || `You matched ${data.matchScore}% for this role!`,
                 });
             }
-            if (responseData.application?._id) {
-                setReferenceId(responseData.application._id);
-            } else if (responseData._id) {
-                setReferenceId(responseData._id);
-            }
+            setReferenceId(data.application?._id || data._id || '');
             setSubmitted(true);
-        } catch (error) {
-            console.error('Chatbot submission error:', error);
-            const status = error?.response?.status;
-            const msg = error?.response?.data?.message || error?.message || 'Unknown error';
-            let displayMsg = 'Submission failed. Please try again.';
-            if (status === 404) {
-                displayMsg = '❌ This job link has expired. Please get a fresh application link from the recruiter.';
-            } else if (status === 400) {
-                displayMsg = `❌ Validation error: ${msg}`;
-            } else if (!navigator.onLine) {
-                displayMsg = '❌ No internet connection. Please check your network.';
-            }
-            setMessages(prev => [...prev, { type: 'error', text: displayMsg }]);
+        } catch (err) {
+            const status = err?.response?.status;
+            const details = err?.response?.data?.details;
+            const msg = details ? details.join(' | ') : (err?.response?.data?.message || err?.message || 'Unknown error');
+            let display = `Submission failed: ${msg}`;
+            if (status === 404) display = '❌ This job link has expired. Please get a fresh link from the recruiter.';
+            else if (status === 400) display = `❌ Validation Error: ${msg}`;
+            else if (!navigator.onLine) display = '❌ No internet connection. Please check your network.';
+            setMessages(prev => [...prev, { type: 'error', text: display }]);
         } finally {
             setSubmitting(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                    <Loader className="w-8 h-8 text-primary-600 animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600">Loading interview...</p>
-                </div>
+    const currentStep = steps[stepIndex];
+    const progress = Math.min((stepIndex / steps.length) * 100, 100);
+    const isFileStep = currentStep?.type === 'file';
+    const isInputDisabled = isTyping || submitting || uploadingResume || isFileStep;
+
+    /* ═══ LOADING ═══ */
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#e8f5e9 0%,#f1f8e9 100%)' }}>
+            <div className="text-center">
+                <Loader className="w-8 h-8 text-emerald-600 animate-spin mx-auto mb-3" />
+                <p className="text-slate-500 text-sm font-medium">Loading your interview…</p>
             </div>
-        );
-    }
+        </div>
+    );
 
-    if (!job) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-                <div className="card max-w-md w-full text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
-                        <MessageCircle className="w-8 h-8 text-red-600" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Job Not Found</h2>
-                    <p className="text-gray-600 mb-4">
-                        The job you are looking for does not exist or has been closed.
-                    </p>
-                    <p className="text-sm text-gray-500">Job ID: {jobId}</p>
+    /* ═══ JOB NOT FOUND ═══ */
+    if (!job) return (
+        <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg,#e8f5e9 0%,#f1f8e9 100%)' }}>
+            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center">
+                <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">🔎</span>
                 </div>
+                <h2 className="text-xl font-black text-slate-900 mb-2">Job Not Found</h2>
+                <p className="text-sm text-slate-500">
+                    This role no longer exists or the link has expired. Please contact the recruiter for a new link.
+                </p>
             </div>
-        );
-    }
+        </div>
+    );
 
-    if (submitted) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-                <div className="card max-w-md w-full text-center animate-fade-in border-none shadow-2xl p-10">
-                    <img src={owlMascot} alt="TalentSetu Owl" className="w-40 h-40 mx-auto mb-6 drop-shadow-xl" />
-                    <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-full mb-4">
-                        <CheckCircle className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <h2 className="text-3xl font-black text-slate-900 mb-2">Application Received!</h2>
-                    <p className="text-slate-500 font-medium mb-8">
-                        Thank you for applying to <strong>{job?.title}</strong>.
-                    </p>
-
-                    {aiFeedback && (
-                        <div className="bg-primary-50 border border-primary-100 rounded-2xl p-6 text-left mb-6">
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="bg-primary-600 text-white font-black px-3 py-1 rounded-lg text-sm">
-                                    {aiFeedback.score}% Match
-                                </div>
-                                <span className="text-[10px] font-black text-primary-400 uppercase tracking-widest">Owl Wisdom</span>
-                            </div>
-                            <p className="text-sm font-bold text-slate-800 leading-relaxed italic">
-                                "{aiFeedback.summary}"
-                            </p>
+    /* ═══ SUCCESS ═══ */
+    if (submitted) return (
+        <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg,#e8f5e9 0%,#f1f8e9 100%)' }}>
+            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center animate-fadeIn">
+                <img src={owlMascot} alt="TalentSetu" className="w-28 h-28 mx-auto mb-4 drop-shadow-xl" />
+                <div className="inline-flex items-center justify-center w-10 h-10 bg-emerald-100 rounded-full mb-3">
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 mb-1">Application Submitted!</h2>
+                <p className="text-slate-500 text-sm mb-6">
+                    Thank you for applying to <strong className="text-slate-700">{job?.title}</strong>. We'll be in touch via email soon.
+                </p>
+                {aiFeedback && (
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-left mb-5">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-emerald-600 text-white text-xs font-black px-2.5 py-1 rounded-lg">
+                                {aiFeedback.score}% Match
+                            </span>
+                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Owl Wisdom</span>
                         </div>
-                    )}
-
-                    <div className="bg-slate-100 rounded-lg py-2 px-4 inline-block mb-8">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Reference Number</p>
-                        <p className="text-xs font-mono font-bold text-slate-600">#{referenceId.slice(-8).toUpperCase()}</p>
-                    </div>
-
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                        We'll be in touch soon via email.
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
-    const currentStep = chatbotFlow[currentStepIndex];
-    const progress = ((currentStepIndex) / chatbotFlow.length) * 100;
-
-    return (
-        <div className="flex flex-col h-screen bg-gray-50">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
-                <div className="flex items-center gap-4">
-                    <div className="relative">
-                        <img src={owlMascot} alt="Assistant" className="w-12 h-12 rounded-2xl shadow-lg border-2 border-primary-50" />
-                        <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></span>
-                    </div>
-                    <div>
-                        <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">
-                            Talent<span className="text-primary-600">Setu.ai</span>
-                        </h1>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Owl Assistant</p>
-                    </div>
-                </div>
-                <div className="hidden sm:block text-right">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Applying for</p>
-                    <p className="text-sm font-black text-slate-800 line-clamp-1">{job?.title}</p>
-                </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="h-1 bg-gray-200">
-                <div
-                    className="h-full bg-primary-600 transition-all duration-500"
-                    style={{ width: `${progress}%` }}
-                />
-            </div>
-
-            {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((msg, idx) => (
-                    <div
-                        key={idx}
-                        className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}
-                    >
-                        <div
-                            className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${msg.type === 'user'
-                                ? 'bg-primary-600 text-white rounded-br-none'
-                                : msg.type === 'error'
-                                    ? 'bg-red-50 text-red-600 border border-red-100'
-                                    : 'bg-white text-gray-800 rounded-bl-none border border-slate-100'
-                                }`}
-                        >
-                            {msg.text}
-                        </div>
-                    </div>
-                ))}
-
-                {/* Typing Indicator */}
-                {(submitting || uploadingResume) && (
-                    <div className="flex justify-start">
-                        <div className="bg-gray-100 rounded-full px-4 py-2 text-xs text-gray-500 animate-pulse">
-                            Processing...
-                        </div>
+                        <p className="text-xs font-semibold text-slate-700 leading-relaxed italic">"{aiFeedback.summary}"</p>
                     </div>
                 )}
-
-                <div ref={messagesEndRef} />
-
-                {/* Fallback Start Button */}
-                {!loading && job && messages.length === 0 && (
-                    <div className="flex justify-center mt-10">
-                        <button
-                            onClick={() => processStep(0)}
-                            className="btn-primary flex items-center gap-2"
-                        >
-                            Start Interview
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {/* Input Area */}
-            <div className="bg-white border-t p-4">
-                {currentStep?.type === 'file' ? (
-                    <div className="flex justify-center">
-                        <input
-                            type="file"
-                            accept={currentStep.accept}
-                            onChange={handleResumeUpload}
-                            className="hidden"
-                            id="file-upload"
-                            disabled={uploadingResume}
-                        />
-                        <label
-                            htmlFor="file-upload"
-                            className="btn-primary w-full flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                            {uploadingResume ? <Loader className="animate-spin w-5 h-5" /> : <Upload className="w-5 h-5" />}
-                            Upload Resume
-                        </label>
-                    </div>
-                ) : (
-                    <div className="flex gap-2">
-                        <input
-                            type={currentStep?.type === 'number' ? 'number' : 'text'}
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            placeholder={currentStep?.placeholder || 'Type your answer...'}
-                            className="flex-1 input-field mb-0 rounded-full"
-                            onKeyPress={(e) => e.key === 'Enter' && handleUserInput(inputValue)}
-                            step={currentStep?.step}
-                            autoFocus
-                            disabled={!currentStep || currentStep.type === 'message'}
-                        />
-                        <button
-                            onClick={() => handleUserInput(inputValue)}
-                            disabled={!inputValue || !currentStep || currentStep.type === 'message'}
-                            className="p-3 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <Send className="w-5 h-5" />
-                        </button>
+                {referenceId && (
+                    <div className="bg-slate-100 rounded-xl py-2 px-4 inline-block">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reference ID</p>
+                        <p className="text-xs font-mono font-bold text-slate-700">#{referenceId.slice(-8).toUpperCase()}</p>
                     </div>
                 )}
             </div>
         </div>
+    );
+
+    /* ═══ MAIN CHAT UI ═══ */
+    return (
+        <>
+            <style>{`
+                @keyframes chatDot {
+                    0%,80%,100% { transform:scale(0.6); opacity:0.4; }
+                    40%         { transform:scale(1);   opacity:1;   }
+                }
+                @keyframes slideUp {
+                    from { opacity:0; transform:translateY(10px); }
+                    to   { opacity:1; transform:translateY(0);    }
+                }
+                @keyframes fadeIn {
+                    from { opacity:0; transform:scale(0.96); }
+                    to   { opacity:1; transform:scale(1);    }
+                }
+                .animate-slideUp { animation:slideUp 0.25s ease forwards; }
+                .animate-fadeIn  { animation:fadeIn 0.4s ease forwards; }
+            `}</style>
+
+            <div className="flex flex-col" style={{ height:'100dvh', background:'linear-gradient(160deg,#e2f0e8 0%,#edf5f0 60%,#e8f4ef 100%)' }}>
+
+                {/* ══ HEADER ══ */}
+                <div className="flex-shrink-0 bg-gradient-to-r from-emerald-600 to-green-600 shadow-md">
+                    <div className="flex items-center justify-between px-4 py-3 max-w-2xl mx-auto w-full">
+                        <div className="flex items-center gap-3">
+                            <div className="relative">
+                                <img src={owlMascot} alt="Assistant" className="w-10 h-10 rounded-full object-cover border-2 border-white/30 shadow-lg" />
+                                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-lime-400 rounded-full border-2 border-emerald-600 animate-pulse" />
+                            </div>
+                            <div>
+                                <h1 className="text-white font-black text-base leading-none tracking-tight">
+                                    Talent<span className="opacity-80">Setu</span><span className="text-lime-300">.ai</span>
+                                </h1>
+                                <p className="text-emerald-100 text-[11px] font-medium mt-0.5">Owl Recruiter · Online</p>
+                            </div>
+                        </div>
+                        <div className="hidden sm:block text-right">
+                            <p className="text-emerald-200 text-[10px] font-bold uppercase tracking-wider">Applying for</p>
+                            <p className="text-white text-sm font-black line-clamp-1 max-w-[180px]">{job?.title}</p>
+                        </div>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="h-0.5 bg-emerald-700/40 max-w-2xl mx-auto w-full">
+                        <div className="h-full bg-lime-400 transition-all duration-700 ease-out" style={{ width:`${progress}%` }} />
+                    </div>
+                </div>
+
+                {/* ══ MESSAGES ══ */}
+                <div className="flex-1 overflow-y-auto">
+                    <div className="px-4 py-5 space-y-1 max-w-2xl mx-auto w-full">
+
+                        {/* Static greeting */}
+                        <div className="flex items-end gap-2 mb-1 animate-slideUp">
+                            <img src={owlMascot} alt="bot" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-1 drop-shadow" />
+                            <div className="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-bl-none px-4 py-2.5 text-slate-800 text-sm leading-relaxed">
+                                👋 Hi! Thanks for reaching out.
+                            </div>
+                        </div>
+                        <div className="flex items-end gap-2 mb-3 animate-slideUp" style={{ animationDelay:'0.15s' }}>
+                            <div className="w-7 flex-shrink-0" />
+                            <div className="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-bl-none px-4 py-2.5 text-slate-800 text-sm leading-relaxed">
+                                We are currently hiring for: <strong>{job?.title}</strong>
+                            </div>
+                        </div>
+
+                        {/* Dynamic messages */}
+                        {messages.map((msg, idx) => {
+                            const prev = messages[idx - 1];
+                            const showAvatar = !prev || prev.type !== 'bot';
+                            return <ChatMessage key={idx} msg={msg} showAvatar={showAvatar} />;
+                        })}
+
+                        {/* Typing / uploading indicator */}
+                        {(isTyping || uploadingResume) && <TypingBubble />}
+
+                        {/* Submitting indicator */}
+                        {submitting && (
+                            <div className="flex items-end gap-2 mb-1 animate-slideUp">
+                                <img src={owlMascot} alt="bot" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-1 drop-shadow" />
+                                <div className="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-bl-none px-4 py-2.5 text-slate-500 text-xs italic">
+                                    Submitting your application…
+                                </div>
+                            </div>
+                        )}
+
+                        <div ref={messagesEndRef} />
+                    </div>
+                </div>
+
+                {/* ══ INPUT AREA ══ */}
+                <div className="flex-shrink-0 bg-white border-t border-slate-100 shadow-[0_-2px_12px_rgba(0,0,0,0.05)]">
+                    <div className="px-3 py-3 max-w-2xl mx-auto w-full">
+                        {isFileStep ? (
+                            <div className="flex flex-col items-center gap-2">
+                                <input
+                                    type="file"
+                                    accept=".pdf,.doc,.docx"
+                                    onChange={handleResumeUpload}
+                                    className="hidden"
+                                    id="resume-upload"
+                                    disabled={uploadingResume || submitting}
+                                />
+                                <label
+                                    htmlFor="resume-upload"
+                                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold py-3 px-5 rounded-full cursor-pointer transition-all duration-200 shadow-sm active:scale-[0.98] text-sm"
+                                >
+                                    {uploadingResume
+                                        ? <><Loader className="w-4 h-4 animate-spin" /> Uploading…</>
+                                        : <><Paperclip className="w-4 h-4" /> Attach Resume (PDF/DOC, max 1MB)</>
+                                    }
+                                </label>
+                                <p className="text-[11px] text-slate-400">Supported: .pdf · .doc · .docx</p>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    ref={inputRef}
+                                    type={
+                                        currentStep?.type === 'number' ? 'number'
+                                        : currentStep?.type === 'email' ? 'email'
+                                        : 'text'
+                                    }
+                                    value={inputValue}
+                                    onChange={e => setInputValue(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleSend()}
+                                    placeholder={currentStep?.placeholder || 'Type your answer…'}
+                                    step={currentStep?.step}
+                                    disabled={isInputDisabled}
+                                    className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all disabled:opacity-50"
+                                />
+                                <button
+                                    onClick={handleSend}
+                                    disabled={!inputValue.trim() || isInputDisabled}
+                                    aria-label="Send"
+                                    className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-sm hover:from-emerald-600 hover:to-green-700 active:scale-90 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                                >
+                                    <Send className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </>
     );
 };
 

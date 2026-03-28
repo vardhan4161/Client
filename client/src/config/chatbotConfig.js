@@ -1,26 +1,32 @@
+// Base flow — notice period branching is handled dynamically in ChatbotApplication.jsx
 export const chatbotFlow = [
     {
-        id: 'intro',
-        type: 'message',
-        text: "Hi! I'm the TalentSethu Assistant. I'll help you bridge the gap to this exciting role. It will only take about 2 minutes.",
-        delay: 1000
-    },
-    {
         id: 'name',
-        question: "Let's start with your full name.",
+        question: "What's your full name?",
         type: 'text',
-        placeholder: 'e.g. John Doe',
+        placeholder: 'e.g. Rahul Sharma',
         validation: {
             required: true,
             minLength: 2,
-            message: 'Please enter a valid name'
+            message: 'Please enter a valid name (at least 2 characters)'
+        }
+    },
+    {
+        id: 'phone',
+        question: 'Enter your mobile number?',
+        type: 'text',
+        placeholder: '+91 9876543210',
+        validation: {
+            required: true,
+            pattern: /^[\+\d][\d\s\-\.\(\)]{8,}$/,
+            message: 'Please enter a valid mobile number (10–13 digits)'
         }
     },
     {
         id: 'email',
-        question: "Great to meet you! What's your email address?",
+        question: 'Enter your email id?',
         type: 'email',
-        placeholder: 'john@example.com',
+        placeholder: 'rahul@example.com',
         validation: {
             required: true,
             pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -28,19 +34,8 @@ export const chatbotFlow = [
         }
     },
     {
-        id: 'phone',
-        question: "And your phone number for us to contact you?",
-        type: 'text',
-        placeholder: '+91 9876543210',
-        validation: {
-            required: true,
-            pattern: /^[\+\d][\d\s\-\.\(\)]{8,}$/,
-            message: 'Please enter a valid phone number (min 10 digits)'
-        }
-    },
-    {
         id: 'totalExperience',
-        question: 'How many years of total experience do you have?',
+        question: 'Total years of experience?',
         type: 'number',
         placeholder: 'e.g. 5',
         step: '0.5',
@@ -48,38 +43,27 @@ export const chatbotFlow = [
             required: true,
             min: 0,
             max: 50,
-            message: 'Please enter a valid experience'
+            message: 'Please enter a valid number of years (0–50)'
         }
     },
     {
-        id: 'relevantExperience',
-        question: 'How many of those are relevant to this role?',
-        type: 'number',
-        placeholder: 'e.g. 3',
-        step: '0.5',
-        validation: {
-            required: true,
-            min: 0,
-            custom: (value, formData) => parseFloat(value) <= parseFloat(formData.totalExperience),
-            message: 'Relevant experience cannot exceed total experience'
-        }
-    },
-    {
-        id: 'skills',
-        question: 'What are your top technical skills? (comma separated)',
+        id: 'noticePeriodCheck',
+        question: 'Are you currently serving notice period? (Yes/No)',
         type: 'text',
-        placeholder: 'React, Node.js, Python...',
+        placeholder: 'Yes or No',
+        isBranching: true,          // flag handled by ChatbotApplication
         validation: {
             required: true,
-            minLength: 2,
-            message: 'Please list at least one skill'
+            pattern: /^(yes|no|y|n)$/i,
+            message: 'Please answer Yes or No'
         }
     },
+    // ── index 5: branching step injected dynamically by the component ──
     {
         id: 'currentCtc',
-        question: 'What is your current CTC (in LPA)?',
+        question: 'What is your current CTC? (per annum)',
         type: 'number',
-        placeholder: 'e.g. 12',
+        placeholder: 'e.g. 12 (in LPA)',
         step: '0.1',
         validation: {
             required: true,
@@ -89,31 +73,19 @@ export const chatbotFlow = [
     },
     {
         id: 'expectedCtc',
-        question: 'What is your expected CTC (in LPA)?',
+        question: 'And what is your expected CTC?',
         type: 'number',
-        placeholder: 'e.g. 15',
+        placeholder: 'e.g. 15 (in LPA)',
         step: '0.1',
         validation: {
             required: true,
             min: 0,
-            message: 'Please enter a valid CTC'
-        }
-    },
-    {
-        id: 'noticePeriod',
-        question: 'What is your notice period (in days)?',
-        type: 'number',
-        placeholder: 'e.g. 30',
-        validation: {
-            required: true,
-            min: 0,
-            max: 180,
-            message: 'Please enter a valid notice period'
+            message: 'Please enter a valid expected CTC'
         }
     },
     {
         id: 'currentLocation',
-        question: 'Where are you currently located?',
+        question: 'What is your current location?',
         type: 'text',
         placeholder: 'e.g. Bangalore',
         validation: {
@@ -125,7 +97,7 @@ export const chatbotFlow = [
     {
         id: 'resume',
         type: 'file',
-        question: 'Finally, please upload your resume.',
+        question: 'Please upload your resume (PDF/DOC, max 1MB).',
         accept: '.pdf,.doc,.docx',
         validation: {
             required: true,
@@ -133,3 +105,21 @@ export const chatbotFlow = [
         }
     }
 ];
+
+// Branch steps injected after noticePeriodCheck
+export const noticeBranch = {
+    yes: {
+        id: 'lastWorkingDay',
+        question: 'When is your last working day in your current company?',
+        type: 'text',
+        placeholder: 'e.g. 30th April 2025',
+        validation: { required: true, minLength: 3, message: 'Please enter your last working day' }
+    },
+    no: {
+        id: 'noticePeriod',
+        question: 'What is your official notice period?',
+        type: 'text',
+        placeholder: 'e.g. 30 days / Immediate',
+        validation: { required: true, minLength: 1, message: 'Please enter your notice period' }
+    }
+};

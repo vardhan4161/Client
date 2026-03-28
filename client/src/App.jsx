@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import ChatbotApplication from './pages/ChatbotApplication';
 import Candidates from './pages/Candidates';
@@ -33,7 +34,8 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          {/* /register is intentionally removed — accounts are pre-seeded */}
+          <Route path="/register" element={<Register />} />
+          {/* /apply/:jobId is public — for candidates */}
           <Route path="/apply/:jobId" element={<ChatbotApplication />} />
           <Route
             path="/dashboard"

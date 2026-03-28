@@ -20,7 +20,7 @@ const submitApplicationSchema = Joi.object({
     noticePeriod: Joi.number().min(0).required(),
     skills: Joi.array().items(Joi.string()).required(),
     resumeUrl: Joi.string().optional().allow('')
-});
+}).unknown(true);
 
 const updateStatusSchema = Joi.object({
     status: Joi.string().valid('APPLIED', 'SHORTLISTED', 'REJECTED', 'HIRED', 'HOLD').required()
