@@ -32,7 +32,7 @@ const candidateSchema = new mongoose.Schema({
     experience_years: Number,
     current_ctc: Number,
     expected_ctc: Number,
-    notice_period: Number,
+    notice_period: String,
     current_location: String,
     created_at: { type: Date, default: Date.now }
 });

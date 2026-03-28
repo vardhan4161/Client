@@ -168,15 +168,15 @@ const ChatbotApplication = () => {
         setInputValue('');
 
         // ── Notice period branching ──
-        if (currentStep.isBranching) {
+        if (currentStep.id === 'noticePeriodCheck') {
             const isYes = /^(yes|y)$/i.test(value);
             const branchStep = isYes ? noticeBranch.yes : noticeBranch.no;
 
             // Find the index of noticePeriodCheck in steps and splice the branch step right after it
             const newSteps = [...steps];
             const branchInsertIndex = stepIndex + 1;
-            // Remove any previously injected branch step (lastWorkingDay or noticePeriod)
-            const filtered = newSteps.filter(s => s.id !== 'lastWorkingDay' && s.id !== 'noticePeriod');
+            // Remove any previously injected branch step
+            const filtered = newSteps.filter(s => !s.id.startsWith('noticePeriod_'));
             // Find where noticePeriodCheck lands in the filtered list, then insert after it
             const checkIdx = filtered.findIndex(s => s.id === 'noticePeriodCheck');
             filtered.splice(checkIdx + 1, 0, branchStep);
@@ -239,7 +239,7 @@ const ChatbotApplication = () => {
                 relevantExperience: parseFloat(formData.relevantExperience || formData.totalExperience) || 0,
                 currentCtc: parseFloat(formData.currentCtc) || 0,
                 expectedCtc: parseFloat(formData.expectedCtc) || 0,
-                noticePeriod: parseInt(formData.noticePeriod) || 0,
+                noticePeriod: formData.noticePeriod_lastWorkingDay || formData.noticePeriod_official || 'Not specified',
                 skills: Array.isArray(formData.skills)
                     ? formData.skills
                     : formData.skills

@@ -109,14 +109,14 @@ export const chatbotFlow = [
 // Branch steps injected after noticePeriodCheck
 export const noticeBranch = {
     yes: {
-        id: 'lastWorkingDay',
+        id: 'noticePeriod_lastWorkingDay',
         question: 'When is your last working day in your current company?',
         type: 'text',
         placeholder: 'e.g. 30th April 2025',
         validation: { required: true, minLength: 3, message: 'Please enter your last working day' }
     },
     no: {
-        id: 'noticePeriod',
+        id: 'noticePeriod_official',
         question: 'What is your official notice period?',
         type: 'text',
         placeholder: 'e.g. 30 days / Immediate',

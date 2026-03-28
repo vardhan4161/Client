@@ -42,12 +42,17 @@ const calculateMatchScore = (candidate, job) => {
 
     // 3. Notice Period (20 pts)
     if (req.maxNoticePeriod) {
-        if (noticePeriod <= req.maxNoticePeriod) {
+        // Simple numeric extraction for scoring
+        const numNotice = (typeof noticePeriod === 'string') 
+            ? (parseInt(noticePeriod.match(/\d+/)?.[0]) || (noticePeriod.toLowerCase().includes('imm') ? 0 : 30))
+            : (noticePeriod || 30);
+
+        if (numNotice <= req.maxNoticePeriod) {
             score += 20;
-            if (noticePeriod <= 15) strengths.push(`Immediate joiner (${noticePeriod}d)`);
+            if (numNotice <= 15) strengths.push(`Immediate joiner (${numNotice}d)`);
         } else {
-            score += Math.max(20 - Math.min((noticePeriod - req.maxNoticePeriod) * 2, 15), 0);
-            flags.push(`⚠️ Notice: ${noticePeriod}d (max: ${req.maxNoticePeriod}d)`);
+            score += Math.max(20 - Math.min((numNotice - req.maxNoticePeriod) * 2, 15), 0);
+            flags.push(`⚠️ Notice: ${numNotice}d (max: ${req.maxNoticePeriod}d)`);
         }
     } else { score += 10; }
 
@@ -134,7 +139,7 @@ const submitApplication = async (req, res) => {
         } else {
             // No resume — algorithmic only
             const fallback = calculateMatchScore(
-                { relevantExperience, skills: skillList, noticePeriod, expectedCtc, currentLocation },
+                { relevantExperience, skills: skillList, noticePeriod: String(noticePeriod), expectedCtc, currentLocation },
                 job
             );
             aiAnalysis = { matchScore: fallback.score, summary: fallback.summary, topSkills: skillList.slice(0, 3), missingSkills: [], strengths: [], concerns: [] };

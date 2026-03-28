@@ -191,7 +191,7 @@ const Candidates = () => {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Notice Period</p>
-                                        <p className="font-semibold text-gray-900">{candidate.notice_period} days</p>
+                                        <p className="font-semibold text-gray-900 line-clamp-1">{candidate.notice_period}</p>
                                     </div>
                                 </div>
 
@@ -352,11 +352,20 @@ const Candidates = () => {
                         </div>
                     </div>
                     {/* PDF iframe */}
-                    <iframe
-                        src={`${viewingPdf.url}#toolbar=1&view=FitH`}
-                        className="flex-1 w-full bg-white"
-                        title={`${viewingPdf.name}'s Resume`}
-                    />
+                    <div className="flex-1 w-full bg-white relative">
+                        <iframe
+                            src={`${viewingPdf.url}#toolbar=1&view=FitH`}
+                            className="w-full h-full border-none"
+                            title={`${viewingPdf.name}'s Resume`}
+                            onError={(e) => console.error('Iframe load error:', e)}
+                        />
+                        {/* Shadow overlay if iframe fails or is empty, user can still download */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 hover:opacity-100 transition-opacity bg-slate-100/10">
+                             <p className="bg-white/90 px-4 py-2 rounded-lg shadow-xl text-slate-600 text-xs font-bold border border-slate-200">
+                                View not loading? Use the Download button above.
+                             </p>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
