@@ -2,7 +2,7 @@
 export const chatbotFlow = [
     {
         id: 'name',
-        question: "What's your full name?",
+        question: "Please enter your full name (As per your Aadhaar/Passport).",
         type: 'text',
         placeholder: 'e.g. Rahul Sharma',
         validation: {
@@ -13,9 +13,9 @@ export const chatbotFlow = [
     },
     {
         id: 'phone',
-        question: 'Enter your mobile number?',
+        question: 'What is your 10-digit mobile number? (e.g., 9876543210)',
         type: 'text',
-        placeholder: '+91 9876543210',
+        placeholder: '9876543210',
         validation: {
             required: true,
             pattern: /^[\+\d][\d\s\-\.\(\)]{8,}$/,
@@ -24,7 +24,7 @@ export const chatbotFlow = [
     },
     {
         id: 'email',
-        question: 'Enter your email id?',
+        question: 'Please enter your professional email address.',
         type: 'email',
         placeholder: 'rahul@example.com',
         validation: {
@@ -35,7 +35,7 @@ export const chatbotFlow = [
     },
     {
         id: 'totalExperience',
-        question: 'Total years of experience?',
+        question: 'Total years of professional experience? (e.g., 5 or 5.5)',
         type: 'number',
         placeholder: 'e.g. 5',
         step: '0.5',
@@ -48,9 +48,9 @@ export const chatbotFlow = [
     },
     {
         id: 'noticePeriodCheck',
-        question: 'Are you currently serving notice period? (Yes/No)',
+        question: 'Are you currently serving your notice period? (Yes / No)',
         type: 'text',
-        placeholder: 'Yes or No',
+        placeholder: 'Type Yes or No',
         isBranching: true,          // flag handled by ChatbotApplication
         validation: {
             required: true,
@@ -61,7 +61,7 @@ export const chatbotFlow = [
     // ── index 5: branching step injected dynamically by the component ──
     {
         id: 'currentCtc',
-        question: 'What is your current CTC? (per annum)',
+        question: 'What is your current Fixed CTC per annum in LPA? (e.g., 12)',
         type: 'number',
         placeholder: 'e.g. 12 (in LPA)',
         step: '0.1',
@@ -73,7 +73,7 @@ export const chatbotFlow = [
     },
     {
         id: 'expectedCtc',
-        question: 'And what is your expected CTC?',
+        question: 'What is your expected CTC in LPA? (e.g., 15)',
         type: 'number',
         placeholder: 'e.g. 15 (in LPA)',
         step: '0.1',
@@ -85,9 +85,9 @@ export const chatbotFlow = [
     },
     {
         id: 'currentLocation',
-        question: 'What is your current location?',
+        question: 'Which city are you currently located in? (e.g., Mumbai, MH)',
         type: 'text',
-        placeholder: 'e.g. Bangalore',
+        placeholder: 'e.g. Mumbai',
         validation: {
             required: true,
             minLength: 2,
@@ -97,7 +97,7 @@ export const chatbotFlow = [
     {
         id: 'resume',
         type: 'file',
-        question: 'Please upload your resume (PDF/DOC, max 1MB).',
+        question: 'Final step! Please upload your resume in PDF/DOC format (Max 1MB).',
         accept: '.pdf,.doc,.docx',
         validation: {
             required: true,
@@ -110,16 +110,16 @@ export const chatbotFlow = [
 export const noticeBranch = {
     yes: {
         id: 'noticePeriod_lastWorkingDay',
-        question: 'When is your last working day in your current company?',
+        question: 'When is your Last Working Day? (e.g., 30th April 2025)',
         type: 'text',
         placeholder: 'e.g. 30th April 2025',
         validation: { required: true, minLength: 3, message: 'Please enter your last working day' }
     },
     no: {
         id: 'noticePeriod_official',
-        question: 'What is your official notice period?',
+        question: 'What is your official notice period in days? (e.g., 30 days or Immediate)',
         type: 'text',
-        placeholder: 'e.g. 30 days / Immediate',
+        placeholder: 'e.g. 30 days',
         validation: { required: true, minLength: 1, message: 'Please enter your notice period' }
     }
 };

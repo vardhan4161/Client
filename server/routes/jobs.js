@@ -20,7 +20,7 @@ const createJobSchema = Joi.object({
 });
 
 const updateStatusSchema = Joi.object({
-    status: Joi.string().valid('OPEN', 'CLOSED', 'DRAFT').required()
+    status: Joi.string().valid('OPEN', 'CLOSED', 'DRAFT', 'SUSPENDED').required()
 });
 
 // Routes

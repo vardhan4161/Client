@@ -18,7 +18,7 @@ const jobSchema = new mongoose.Schema({
         requiredSkills: [String],
         preferredLocation: String
     },
-    status: { type: String, enum: ['OPEN', 'CLOSED', 'DRAFT'], default: 'OPEN' },
+    status: { type: String, enum: ['OPEN', 'CLOSED', 'DRAFT', 'SUSPENDED'], default: 'OPEN' },
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now }
 });

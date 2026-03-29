@@ -48,7 +48,7 @@ const authLimiter = rateLimit({
 });
 
 // ─── Static Files ──────────────────────────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
 
 // ─── Health Check (must be BEFORE the SPA catch-all) ─────────────────────────
 app.get('/health', (req, res) => {

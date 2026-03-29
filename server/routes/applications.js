@@ -17,7 +17,7 @@ const submitApplicationSchema = Joi.object({
     currentCtc: Joi.number().min(0).required(),
     expectedCtc: Joi.number().min(0).required(),
     currentLocation: Joi.string().min(2).required(),
-    noticePeriod: Joi.number().min(0).required(),
+    noticePeriod: Joi.string().required(),
     skills: Joi.array().items(Joi.string()).required(),
     resumeUrl: Joi.string().optional().allow('')
 }).unknown(true);

@@ -38,7 +38,7 @@ const getJobs = async (req, res) => {
 // GET /api/jobs/:id  (public — for candidates)
 const getJobById = async (req, res) => {
     try {
-        const job = await Job.findOne({ _id: req.params.id, status: 'OPEN' });
+        const job = await Job.findOne({ _id: req.params.id, status: { $in: ['OPEN', 'SUSPENDED'] } });
         if (!job) return res.status(404).json({ success: false, message: 'Job not found or closed' });
         res.json({ success: true, data: { job } });
     } catch (error) {

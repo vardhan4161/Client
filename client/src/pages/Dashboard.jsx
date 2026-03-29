@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jobAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Briefcase, Users, LogOut, ExternalLink, Copy, Check, Star } from 'lucide-react';
+import { Plus, Briefcase, Users, LogOut, ExternalLink, Copy, Check, Star, Pause, Play } from 'lucide-react';
 import logo from '../assets/logo.png';
 import owlSmall from '../assets/owl-mascot.png';
 
@@ -35,6 +35,19 @@ const Dashboard = () => {
     const handleLogout = () => {
         logout();
         navigate('/login');
+    };
+
+    const handleToggleStatus = async (jobId, currentStatus) => {
+        try {
+            const newStatus = currentStatus === 'OPEN' ? 'SUSPENDED' : 'OPEN';
+            await jobAPI.updateStatus(jobId, newStatus);
+            setJobs(prev => prev.map(job =>
+                job._id === jobId ? { ...job, status: newStatus } : job
+            ));
+        } catch (error) {
+            console.error('Failed to update job status:', error);
+            alert('Failed to update job status. Please try again.');
+        }
     };
 
     const copyApplicationLink = (jobId) => {
@@ -189,9 +202,11 @@ const Dashboard = () => {
                                         <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
                                         <p className="text-gray-600 mb-4 line-clamp-2">{job.description}</p>
                                         <div className="flex items-center gap-4">
-                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${job.status === 'OPEN'
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-gray-100 text-gray-700'
+                                            <span className={`px-3 py-1 rounded-full text-xs font-black tracking-widest uppercase ${job.status === 'OPEN'
+                                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                                : job.status === 'SUSPENDED'
+                                                    ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                                    : 'bg-slate-100 text-slate-700 border border-slate-200'
                                                 }`}>
                                                 {job.status}
                                             </span>
@@ -222,13 +237,27 @@ const Dashboard = () => {
                                                 </>
                                             )}
                                         </button>
-                                        <button
-                                            onClick={() => navigate(`/job/${job._id}/candidates`)}
-                                            className="btn-primary flex items-center gap-2"
-                                        >
-                                            <Users className="w-4 h-4" />
-                                            View Candidates
-                                        </button>
+                                            <button
+                                                onClick={() => navigate(`/job/${job._id}/candidates`)}
+                                                className="btn-primary flex items-center gap-2"
+                                            >
+                                                <Users className="w-4 h-4" />
+                                                View Candidates
+                                            </button>
+                                            <button
+                                                onClick={() => handleToggleStatus(job._id, job.status)}
+                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm transition-all ${job.status === 'OPEN'
+                                                    ? 'bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200'
+                                                    : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200'
+                                                    }`}
+                                                title={job.status === 'OPEN' ? 'Suspend job' : 'Reactivate job'}
+                                            >
+                                                {job.status === 'OPEN' ? (
+                                                    <><Pause className="w-4 h-4" /> Suspend</>
+                                                ) : (
+                                                    <><Play className="w-4 h-4" /> Resume</>
+                                                )}
+                                            </button>
                                     </div>
                                 </div>
                             </div>

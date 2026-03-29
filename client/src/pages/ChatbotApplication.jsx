@@ -75,7 +75,7 @@ const ChatbotApplication = () => {
     // Dynamic steps list (base flow + injected branch step)
     const [steps, setSteps] = useState([...chatbotFlow]);
     const [stepIndex, setStepIndex] = useState(0);
-    const [formData, setFormData] = useState({ resumeUrl: '' });
+    const formDataRef = useRef({ resumeUrl: '' });
 
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
@@ -163,8 +163,7 @@ const ChatbotApplication = () => {
 
         // User bubble
         setMessages(prev => [...prev, { type: 'user', text: value }]);
-        const newFormData = { ...formData, [currentStep.id]: value };
-        setFormData(newFormData);
+        formDataRef.current = { ...formDataRef.current, [currentStep.id]: value };
         setInputValue('');
 
         // ── Notice period branching ──
@@ -212,7 +211,7 @@ const ChatbotApplication = () => {
         setIsTyping(true);
         try {
             const response = await uploadAPI.uploadResume(file);
-            setFormData(prev => ({ ...prev, resumeUrl: response.data.url }));
+            formDataRef.current = { ...formDataRef.current, resumeUrl: response.data.url };
             setMessages(prev => [...prev, { type: 'user', text: `📎 ${file.name}` }]);
             setIsTyping(false);
             setTimeout(() => handleSubmit(), 400);
@@ -227,23 +226,24 @@ const ChatbotApplication = () => {
     /* Final application submit */
     const handleSubmit = async () => {
         setSubmitting(true);
+        const dataToSubmit = formDataRef.current;
         try {
             const response = await applicationAPI.submit({
                 jobId,
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone,
-                currentLocation: formData.currentLocation,
-                resumeUrl: formData.resumeUrl,
-                totalExperience: parseFloat(formData.totalExperience) || 0,
-                relevantExperience: parseFloat(formData.relevantExperience || formData.totalExperience) || 0,
-                currentCtc: parseFloat(formData.currentCtc) || 0,
-                expectedCtc: parseFloat(formData.expectedCtc) || 0,
-                noticePeriod: formData.noticePeriod_lastWorkingDay || formData.noticePeriod_official || 'Not specified',
-                skills: Array.isArray(formData.skills)
-                    ? formData.skills
-                    : formData.skills
-                        ? String(formData.skills).split(',').map(s => s.trim()).filter(Boolean)
+                name: dataToSubmit.name,
+                email: dataToSubmit.email,
+                phone: dataToSubmit.phone,
+                currentLocation: dataToSubmit.currentLocation,
+                resumeUrl: dataToSubmit.resumeUrl,
+                totalExperience: parseFloat(dataToSubmit.totalExperience) || 0,
+                relevantExperience: parseFloat(dataToSubmit.relevantExperience || dataToSubmit.totalExperience) || 0,
+                currentCtc: parseFloat(dataToSubmit.currentCtc) || 0,
+                expectedCtc: parseFloat(dataToSubmit.expectedCtc) || 0,
+                noticePeriod: dataToSubmit.noticePeriod_lastWorkingDay || dataToSubmit.noticePeriod_official || 'Not specified',
+                skills: Array.isArray(dataToSubmit.skills)
+                    ? dataToSubmit.skills
+                    : dataToSubmit.skills
+                        ? String(dataToSubmit.skills).split(',').map(s => s.trim()).filter(Boolean)
                         : [],
             });
 
@@ -285,16 +285,20 @@ const ChatbotApplication = () => {
         </div>
     );
 
-    /* ═══ JOB NOT FOUND ═══ */
-    if (!job) return (
+    /* ═══ JOB NOT FOUND / SUSPENDED ═══ */
+    if (!job || job.status === 'SUSPENDED') return (
         <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg,#e8f5e9 0%,#f1f8e9 100%)' }}>
             <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center">
-                <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl">🔎</span>
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${!job ? 'bg-red-100' : 'bg-amber-100'}`}>
+                    <span className="text-2xl">{!job ? '🔎' : '⏳'}</span>
                 </div>
-                <h2 className="text-xl font-black text-slate-900 mb-2">Job Not Found</h2>
+                <h2 className="text-xl font-black text-slate-900 mb-2">
+                    {!job ? 'Job Not Found' : 'Applications Paused'}
+                </h2>
                 <p className="text-sm text-slate-500">
-                    This role no longer exists or the link has expired. Please contact the recruiter for a new link.
+                    {!job 
+                        ? 'This role no longer exists or the link has expired. Please contact the recruiter for a new link.'
+                        : 'The recruiter has temporarily paused new applications for this role. Please check back later!'}
                 </p>
             </div>
         </div>
@@ -462,6 +466,7 @@ const ChatbotApplication = () => {
                                     placeholder={currentStep?.placeholder || 'Type your answer…'}
                                     step={currentStep?.step}
                                     disabled={isInputDisabled}
+                                    autoFocus
                                     className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all disabled:opacity-50"
                                 />
                                 <button

@@ -126,7 +126,8 @@ const submitApplication = async (req, res) => {
                     parsingResult.text || parsingResult.rawText || '',
                     job.title,
                     job.description,
-                    { name, totalExperience, relevantExperience, skills: skillList }
+                    { name, totalExperience, relevantExperience, skills: skillList },
+                    job.requirements || {}
                 );
             } catch (aiErr) {
                 // Gemini failed — fall back to algorithmic scoring

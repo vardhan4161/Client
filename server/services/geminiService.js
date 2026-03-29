@@ -8,14 +8,22 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 /**
  * Interface with Gemini to analyze resume text against a job description.
  */
-const analyzeResume = async (resumeText, jobTitle, jobDescription, candidateData) => {
+const analyzeResume = async (resumeText, jobTitle, jobDescription, candidateData, jobRequirements = {}) => {
     try {
+        const { minExperience, maxNoticePeriod, maxExpectedCtc, requiredSkills, preferredLocation } = jobRequirements;
+
         const prompt = `
         You are an expert AI recruiter assistant for TalentSetu.ai. 
         Analyze the following candidate's resume text against the job requirements.
 
         JOB TITLE: ${jobTitle}
         JOB DESCRIPTION: ${jobDescription}
+
+        SPECIFIC TARGETS:
+        - MIN EXPERIENCE: ${minExperience || 'Not specified'} years
+        - REQUIRED SKILLS: ${requiredSkills ? requiredSkills.join(', ') : 'Not specified'}
+        - MAX CTC: ${maxExpectedCtc || 'Not specified'} LPA
+        - PREFERRED LOCATION: ${preferredLocation || 'Not specified'}
 
         CANDIDATE NAME: ${candidateData.name}
         TOTAL EXPERIENCE: ${candidateData.totalExperience} years
@@ -26,7 +34,8 @@ const analyzeResume = async (resumeText, jobTitle, jobDescription, candidateData
         ${resumeText}
 
         INSTRUCTIONS:
-        1. Calculate a MATCH SCORE (0-100) based on how well the candidate fits the role.
+        1. Calculate a MATCH SCORE (0-100) based on how well the candidate fits the role. 
+           - HEAVILY WEIGHT specific targets like MIN EXPERIENCE and REQUIRED SKILLS.
         2. Identify TOP SKILLS verified from the resume.
         3. Identify MISSING CRITICAL SKILLS or GAPS.
         4. Provide a HIGH-LEVEL SUMMARY (max 3 sentences) that tells the recruiter why this candidate is or isn't a good fit. Use an emoji to start.
